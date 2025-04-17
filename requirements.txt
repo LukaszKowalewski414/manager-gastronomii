@@ -1,0 +1,3 @@
+#ZBIÓR BIBILIOTEK DO PROGRAMU
+
+sqlalchemy
