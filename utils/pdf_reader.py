@@ -67,10 +67,17 @@ def wyciagnij_dane_z_pdf(tekst):
 
     # Szukamy nazwy firmy
     firma = "–"
-    linie_niskie = tekst.lower().split("\n")
-    for i, l in enumerate(linie_niskie):
-        if "pl" in l and re.search(r"\d{10}", l):
-            firma = linie[i - 1].strip() if i > 0 else "–"
+    linie = tekst.split("\n")
+
+    for i, linia in enumerate(linie):
+        if "sprzedawca" in linia.lower():
+            for j in range(i + 1, min(i + 4, len(linie))):
+                kandydat = linie[j].strip()
+                if any(x in kandydat.lower() for x in ["nip", "adres", "bdo"]):
+                    continue
+                if len(re.findall(r"[A-Za-z]", kandydat)) >= 3:
+                    firma = re.sub(r"\s{2,}", " ", kandydat).strip()
+                    break
             break
 
     return {
