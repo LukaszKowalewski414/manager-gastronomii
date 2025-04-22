@@ -3,8 +3,8 @@ from utils.koszty import dodaj_koszt_pracownika
 from utils.faktury import dodaj_fakture
 from utils.raport import raport_miesieczny
 from utils.pdf_reader import czytaj_pdf, wyciagnij_dane_z_pdf
-# from utils.koszty import dodaj_koszt_pracownika (dodamy za chwilę)
-# from utils.faktury import dodaj_fakture (dodamy później)
+from utils.pdf_reader import czytaj_pdf, wyciagnij_date_z_tekstu
+
 
 def menu():
     while True:
