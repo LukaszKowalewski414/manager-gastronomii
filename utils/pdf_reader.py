@@ -126,11 +126,72 @@ def wyciagnij_dane_z_pdf(tekst):
         dane["kwota"] = f"{max(kwoty_znalezione):.2f}"
         print(f"✅ Wybrana największa kwota: {dane['kwota']}")
 
+#SZUKAMY NIPU
+    dane["nip"] = "–"
+    dane["firma"] = "–"
+    blok_sprzedawcy = []
 
-    # === SZUKANIE NIPU (różne formaty) ===
-    match = re.search(r"(PL)?[ \-]?\d{3}[ \-]?\d{3}[ \-]?\d{3}", tekst)
-    if match:
-        dane["nip"] = match.group().replace(" ", "").replace("-", "")
+    # === Krok 1: próbujemy blok po "Sprzedawca"
+    for i, linia in enumerate(linie):
+        if "sprzedawca" in linia.lower():
+            print(f"📍 ZNALEZIONO SPRZEDAWCĘ: {linia.strip()}")
+            licznik = 0
+            for j in range(i + 1, len(linie)):
+                linia_czysta = linie[j].strip()
+                if linia_czysta:
+                    blok_sprzedawcy.append(linia_czysta)
+                    licznik += 1
+                if licznik >= 10:
+                    break
+            break
+
+    print("📦 Blok sprzedawcy:")
+    for linia in blok_sprzedawcy:
+        print("→", linia)
+
+    for i, linia in enumerate(blok_sprzedawcy):
+        match_nip = re.findall(r"(PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", linia)
+        if match_nip:
+            for _, nip_raw in match_nip:
+                czysty = nip_raw.replace(" ", "").replace("-", "")
+                if len(czysty) == 10 and czysty.isdigit():
+                    dane["nip"] = czysty
+                    print(f"✅ NIP sprzedawcy (blok): {czysty}")
+                    # Szukamy firmy w liniach powyżej
+                    for j in range(i - 1, -1, -1):
+                        nazwa = blok_sprzedawcy[j].strip()
+                        if 3 < len(nazwa) < 100 and not re.search(r"\d{3}", nazwa):
+                            dane["firma"] = nazwa
+                            print(f"🏢 Nazwa firmy (blok): {nazwa}")
+                            break
+                    break
+        if dane["nip"] != "–":
+            break
+
+    # === Krok 2: fallback – jeśli nic nie znaleziono w bloku "Sprzedawca"
+    if dane["nip"] == "–":
+        print("⚠️ Fallback – przeszukiwanie całego dokumentu")
+        for i, linia in enumerate(linie):
+            match_nip = re.findall(r"(PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", linia)
+            if match_nip:
+                for _, nip_raw in match_nip:
+                    czysty = nip_raw.replace(" ", "").replace("-", "")
+                    if len(czysty) == 10 and czysty.isdigit():
+                        dane["nip"] = czysty
+                        print(f"✅ NIP fallback: {czysty}")
+                        # Szukamy firmy w liniach powyżej
+                        for j in range(i - 1, max(i - 5, -1), -1):
+                            nazwa = linie[j].strip()
+                            if 3 < len(nazwa) < 100 and not re.search(r"\d{3}", nazwa):
+                                dane["firma"] = nazwa
+                                print(f"🏢 Firma fallback: {nazwa}")
+                                break
+                        break
+            if dane["nip"] != "–":
+                break
+
+
+
 
     # === SZUKANIE NAZWY FIRMY (po słowie "Sprzedawca") ===
     for i, linia in enumerate(linie):

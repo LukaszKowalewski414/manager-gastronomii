@@ -40,6 +40,7 @@ if __name__ == "__main__":
     tekst = czytaj_pdf(nazwa)
     dane = wyciagnij_dane_z_pdf(tekst)
 
+
     print("\n📄 DANE Z FAKTURY:")
     for k, v in dane.items():
         print(f"{k.capitalize()}: {v}")
