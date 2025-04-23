@@ -3,6 +3,54 @@ import os
 import re
 from datetime import datetime
 
+# ─── helpery do wyboru nazwy firmy ────────────────────────────────────────────
+
+forbidden_keywords = {
+    "faktura", "nr", "bdo", "opłaty", "usługi", "dostawy", "zakończenia",
+    "data", "miejscowość", "kod", "termin", "ul.", "tel", "www", "kontakt",
+    "@", "wykonania"
+}
+
+def is_valid_candidate(line: str) -> bool:
+    l = line.strip()
+    # wyklucza linie zaczynające się od cyfry (np. kod pocztowy)
+    if l and l[0].isdigit():
+        return False
+    if not (3 < len(l) < 100 and l.count(" ") >= 1):
+        return False
+    if l.endswith(":"):
+        return False
+    if sum(1 for c in l if c.isupper()) < 2:
+        return False
+    low = l.lower()
+    if any(kw in low for kw in forbidden_keywords):
+        return False
+    if low.startswith("lub "):
+        return False
+    return True
+
+def score_candidate(line: str) -> int:
+    # liczba wielkich liter + liczba spacji
+    return sum(1 for c in line if c.isupper()) + line.count(" ")
+
+def extract_company_name(lines: list[str], nip_idx: int) -> str | None:
+    window = 4
+    above = lines[max(0, nip_idx - window): nip_idx]
+    below = lines[nip_idx + 1: nip_idx + 1 + window]
+
+    valid_above = [l for l in above if is_valid_candidate(l)]
+    if valid_above:
+        return max(valid_above, key=score_candidate).strip()
+
+    valid_below = [l for l in below if is_valid_candidate(l)]
+    if valid_below:
+        return max(valid_below, key=score_candidate).strip()
+
+    return None
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 def czytaj_pdf(nazwa_pliku):
     sciezka = os.path.join("faktury", nazwa_pliku)
 
@@ -126,80 +174,35 @@ def wyciagnij_dane_z_pdf(tekst):
         dane["kwota"] = f"{max(kwoty_znalezione):.2f}"
         print(f"✅ Wybrana największa kwota: {dane['kwota']}")
 
-#SZUKAMY NIPU
+    # ─── znajdź NIP SPRZEDAWCY i nazwę FIRMY ───────────────────────
     dane["nip"] = "–"
     dane["firma"] = "–"
-    blok_sprzedawcy = []
 
-    # === Krok 1: próbujemy blok po "Sprzedawca"
+    # skanuj cały dokument aż znajdziesz pierwszy poprawny NIP
     for i, linia in enumerate(linie):
-        if "sprzedawca" in linia.lower():
-            print(f"📍 ZNALEZIONO SPRZEDAWCĘ: {linia.strip()}")
-            licznik = 0
-            for j in range(i + 1, len(linie)):
-                linia_czysta = linie[j].strip()
-                if linia_czysta:
-                    blok_sprzedawcy.append(linia_czysta)
-                    licznik += 1
-                if licznik >= 10:
-                    break
+        m = re.search(r"(?:PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", linia)
+        if not m:
+            continue
+        nip_raw = m.group(1)
+        czysty = nip_raw.replace(" ", "").replace("-", "")
+        if len(czysty) == 10 and czysty.isdigit():
+            dane["nip"] = czysty
+            print(f"✅ Znalazłem NIP sprzedawcy: {czysty}")
+            # teraz jedna funkcja, która wybiera firmę z okolic tej linii
+            nazwa = extract_company_name(linie, i)
+            if nazwa:
+                dane["firma"] = nazwa
+                print(f"🏢 Trafiona firma: {dane['firma']}")
+            else:
+                print("⚠️ Nie znalazłem nazwy firmy w 4 liniach od NIP-u sprzedawcy")
             break
-
-    print("📦 Blok sprzedawcy:")
-    for linia in blok_sprzedawcy:
-        print("→", linia)
-
-    for i, linia in enumerate(blok_sprzedawcy):
-        match_nip = re.findall(r"(PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", linia)
-        if match_nip:
-            for _, nip_raw in match_nip:
-                czysty = nip_raw.replace(" ", "").replace("-", "")
-                if len(czysty) == 10 and czysty.isdigit():
-                    dane["nip"] = czysty
-                    print(f"✅ NIP sprzedawcy (blok): {czysty}")
-                    # Szukamy firmy w liniach powyżej
-                    for j in range(i - 1, -1, -1):
-                        nazwa = blok_sprzedawcy[j].strip()
-                        if 3 < len(nazwa) < 100 and not re.search(r"\d{3}", nazwa):
-                            dane["firma"] = nazwa
-                            print(f"🏢 Nazwa firmy (blok): {nazwa}")
-                            break
-                    break
-        if dane["nip"] != "–":
-            break
-
-    # === Krok 2: fallback – jeśli nic nie znaleziono w bloku "Sprzedawca"
-    if dane["nip"] == "–":
-        print("⚠️ Fallback – przeszukiwanie całego dokumentu")
-        for i, linia in enumerate(linie):
-            match_nip = re.findall(r"(PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", linia)
-            if match_nip:
-                for _, nip_raw in match_nip:
-                    czysty = nip_raw.replace(" ", "").replace("-", "")
-                    if len(czysty) == 10 and czysty.isdigit():
-                        dane["nip"] = czysty
-                        print(f"✅ NIP fallback: {czysty}")
-                        # Szukamy firmy w liniach powyżej
-                        for j in range(i - 1, max(i - 5, -1), -1):
-                            nazwa = linie[j].strip()
-                            if 3 < len(nazwa) < 100 and not re.search(r"\d{3}", nazwa):
-                                dane["firma"] = nazwa
-                                print(f"🏢 Firma fallback: {nazwa}")
-                                break
-                        break
-            if dane["nip"] != "–":
-                break
+    # ───────────────────────────────────────────────────────────────
 
 
+    # Skróć firmę, jeśli zawiera przecinki – weź tylko pierwszy człon
+    if "," in dane["firma"]:
+        dane["firma"] = dane["firma"].split(",")[0].strip()
+        print(f"✂️ Skrócona firma: {dane['firma']}")
 
-
-    # === SZUKANIE NAZWY FIRMY (po słowie "Sprzedawca") ===
-    for i, linia in enumerate(linie):
-        if "sprzedawca" in linia.lower():
-            if i + 1 < len(linie):
-                nazwa = linie[i + 1].strip()
-                if 3 < len(nazwa) < 100:
-                    dane["firma"] = nazwa
-            break
 
     return dane
