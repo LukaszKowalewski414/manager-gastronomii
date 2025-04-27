@@ -42,3 +42,11 @@ class Faktura(Base):
     data = Column(Date, nullable=False)
     kwota = Column(Float, nullable=False)
     kategoria = Column(Enum(KategoriaFaktury), nullable=False)
+
+class Dostawca(Base):
+    __tablename__ = "dostawcy"
+
+    id = Column(Integer, primary_key=True)
+    company_name = Column(String, nullable=False, unique=True)
+    nip = Column(String, nullable=False)
+    kategoria = Column(Enum(KategoriaFaktury), nullable=False)
