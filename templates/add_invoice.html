@@ -3,42 +3,55 @@
 {% block content %}
 <div class="container my-5">
     <h2 class="text-center mb-4 text-primary">Dodaj fakturę / koszt</h2>
+
+    <!-- Formularz uploadu pliku -->
+    <form method="POST" action="{{ url_for('upload_invoice') }}" enctype="multipart/form-data" class="mb-5">
+        <div class="mb-3">
+            <label for="pdf_file" class="form-label">Wgraj plik PDF faktury</label>
+            <input type="file" id="pdf_file" name="pdf_file" class="form-control" accept="application/pdf" required>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-info btn-lg px-5">Wczytaj fakturę</button>
+        </div>
+    </form>
+
+    <!-- Formularz dodawania/edycji danych faktury -->
     <form method="POST" action="{{ url_for('add_invoice') }}">
 
         <!-- Data zakupu -->
         <div class="mb-4">
             <label for="purchase_date" class="form-label">Data zakupu</label>
-            <input type="date" id="purchase_date" name="purchase_date" class="form-control" required>
+            <input type="date" id="purchase_date" name="purchase_date" class="form-control" value="{{ dane.get('data', '') }}">
         </div>
 
         <!-- Dostawca -->
         <div class="mb-4">
             <label for="supplier" class="form-label">Dostawca</label>
-            <input type="text" id="supplier" name="supplier" class="form-control" required>
+            <input type="text" id="supplier" name="supplier" class="form-control" value="{{ dane.get('firma', '') }}">
         </div>
 
-        <!-- Kwota netto i brutto -->
+        <!-- Kwoty -->
         <div class="row mb-4">
             <div class="col-md-6">
                 <label for="net_amount" class="form-label">Kwota netto</label>
-                <input type="number" step="0.01" id="net_amount" name="net_amount" class="form-control" required>
+                <input type="number" step="0.01" id="net_amount" name="net_amount" class="form-control" value="{{ dane.get('net_amount', '') }}">
             </div>
             <div class="col-md-6">
                 <label for="gross_amount" class="form-label">Kwota brutto</label>
-                <input type="number" step="0.01" id="gross_amount" name="gross_amount" class="form-control" required>
+                <input type="number" step="0.01" id="gross_amount" name="gross_amount" class="form-control" value="{{ dane.get('kwota', '') }}">
             </div>
         </div>
 
         <!-- Numer faktury -->
         <div class="mb-4">
             <label for="invoice_number" class="form-label">Numer faktury (opcjonalnie)</label>
-            <input type="text" id="invoice_number" name="invoice_number" class="form-control">
+            <input type="text" id="invoice_number" name="invoice_number" class="form-control" value="{{ dane.get('invoice_number', '') }}">
         </div>
 
-        <!-- Opis faktury -->
+        <!-- Opis -->
         <div class="mb-4">
             <label for="description" class="form-label">Opis faktury / kosztu</label>
-            <input type="text" id="description" name="description" class="form-control" required>
+            <input type="text" id="description" name="description" class="form-control" value="{{ dane.get('description', '') }}">
         </div>
 
         <!-- Kategoria -->
@@ -46,20 +59,25 @@
             <label for="category" class="form-label">Kategoria</label>
             <select id="category" name="category" class="form-select" required>
                 <option value="">Wybierz kategorię...</option>
-                <option value="Towar">Towar</option>
-                <option value="Pracownicy (umowy, stałe koszty)">Pracownicy (umowy, stałe koszty)</option>
-                <option value="Utrzymanie lokalu">Utrzymanie lokalu</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Podatki">Podatki</option>
-                <option value="Inne">Inne</option>
+                <option value="Towar" {% if dane.get('category','') == 'Towar' %}selected{% endif %}>Towar</option>
+                <option value="Pracownicy (umowy, stałe koszty)"
+                        {% if dane.get('category','') == 'Pracownicy (umowy, stałe koszty)' %}
+                            selected
+                        {% endif %}>
+                    Pracownicy (umowy, stałe koszty)
+                </option>
+                <option value="Utrzymanie lokalu" {% if dane.get('category','') == 'Utrzymanie lokalu' %}selected{% endif %}>Utrzymanie lokalu</option>
+                <option value="Marketing" {% if dane.get('category','') == 'Marketing' %}selected{% endif %}>Marketing</option>
+                <option value="Podatki" {% if dane.get('category','') == 'Podatki' %}selected{% endif %}>Podatki</option>
+                <option value="Inne" {% if dane.get('category','') == 'Inne' %}selected{% endif %}>Inne</option>
             </select>
         </div>
 
-        <!-- Przycisk Zapisz -->
+
+        <!-- Przycisk zapisz -->
         <div class="text-center">
             <button type="submit" class="btn btn-success btn-lg px-5">Zapisz</button>
         </div>
-
     </form>
 </div>
 {% endblock %}

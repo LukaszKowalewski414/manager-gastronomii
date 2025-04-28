@@ -51,9 +51,7 @@ def extract_company_name(lines: list[str], nip_idx: int) -> str | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def czytaj_pdf(nazwa_pliku):
-    sciezka = os.path.join("faktury", nazwa_pliku)
-
+def czytaj_pdf(sciezka):
     if not os.path.exists(sciezka):
         print("❌ Nie znaleziono pliku:", sciezka)
         return
@@ -66,6 +64,7 @@ def czytaj_pdf(nazwa_pliku):
 
     dokument.close()
     return tekst_caly
+
 
 def oczysc_kwote(tekst):
     tekst = tekst.lower().replace("pln", "").replace("zł", "")
@@ -205,4 +204,12 @@ def wyciagnij_dane_z_pdf(tekst):
         print(f"✂️ Skrócona firma: {dane['firma']}")
 
 
+    return dane
+
+#DOPISANE ZEBY WGRYWAC FAKTURY Z PLIKU - JAK COŚ SIĘ ZEPSUJE TO USUWAMY
+def parse_invoice_from_pdf(file_path):
+    tekst = czytaj_pdf(file_path)
+    if not tekst:
+        return None
+    dane = wyciagnij_dane_z_pdf(tekst)
     return dane
