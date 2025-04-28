@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4 text-primary">Dodaj rozliczenie dnia</h2>
+    <form method="POST" action="{{ url_for('add_daily') }}">
+
+        <!-- Data rozliczenia -->
+        <div class="mb-4">
+            <label for="date" class="form-label">Data rozliczenia</label>
+            <input type="date" id="date" name="date" class="form-control" required>
+        </div>
+
+        <!-- Utargi -->
+        <h4 class="mt-5 mb-3 text-secondary">Utargi</h4>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="bar_revenue" class="form-label">Utarg z baru</label>
+                <input type="number" step="0.01" id="bar_revenue" name="bar_revenue" class="form-control" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="restaurant_revenue" class="form-label">Utarg z sali</label>
+                <input type="number" step="0.01" id="restaurant_revenue" name="restaurant_revenue" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="tickets_revenue" class="form-label">Utarg z wejściówek</label>
+                <input type="number" step="0.01" id="tickets_revenue" name="tickets_revenue" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="other_revenue" class="form-label">Utarg inny</label>
+                <input type="number" step="0.01" id="other_revenue" name="other_revenue" class="form-control">
+            </div>
+        </div>
+
+        <!-- Koszty pracowników -->
+        <h4 class="mt-5 mb-3 text-secondary">Koszty pracowników</h4>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="bar_staff_cost" class="form-label">Bar</label>
+                <input type="number" step="0.01" id="bar_staff_cost" name="bar_staff_cost" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="waiters_cost" class="form-label">Kelnerzy</label>
+                <input type="number" step="0.01" id="waiters_cost" name="waiters_cost" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="cooks_cost" class="form-label">Kucharze</label>
+                <input type="number" step="0.01" id="cooks_cost" name="cooks_cost" class="form-control">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="marketing_cost" class="form-label">Marketing</label>
+                <input type="number" step="0.01" id="marketing_cost" name="marketing_cost" class="form-control">
+            </div>
+            <div class="col-12 mb-3">
+                <label for="other_staff_cost" class="form-label">Inne koszty pracowników</label>
+                <input type="number" step="0.01" id="other_staff_cost" name="other_staff_cost" class="form-control">
+                <label for="other_staff_description" class="form-label mt-2">Opis innych kosztów</label>
+                <input type="text" id="other_staff_description" name="other_staff_description" class="form-control">
+            </div>
+        </div>
+
+        <!-- Wydatki dodatkowe -->
+        <h4 class="mt-5 mb-3 text-secondary">Wydatki dodatkowe</h4>
+        <div class="mb-3">
+            <label for="additional_expenses" class="form-label">Kwota wydatków</label>
+            <input type="number" step="0.01" id="additional_expenses" name="additional_expenses" class="form-control">
+        </div>
+        <div class="mb-4">
+            <label for="additional_expenses_description" class="form-label">Opis wydatków</label>
+            <input type="text" id="additional_expenses_description" name="additional_expenses_description" class="form-control">
+        </div>
+
+        <!-- Przycisk Zapisz -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-success btn-lg px-5">Zapisz</button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}

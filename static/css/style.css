@@ -1,0 +1,44 @@
+/* Ogólny wygląd strony */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Nagłówek */
+header h1 {
+    font-size: 4rem;
+    font-weight: 700;
+    color: #0d6efd; /* Bootstrapowy niebieski */
+    margin-bottom: 0.5rem;
+}
+
+header h4 {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #6c757d;
+    text-align: right;
+    margin-right: 10%;
+}
+
+/* Główne przyciski */
+.btn-primary, .btn-warning {
+    padding: 1rem 2rem;
+    font-size: 1.5rem;
+    border-radius: 12px;
+}
+
+/* Przyciski podsumowań */
+.btn-outline-primary {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.2rem;
+    border-radius: 10px;
+}
+
+/* Stopka */
+footer {
+    margin-top: auto;
+    padding: 1rem 0;
+}
