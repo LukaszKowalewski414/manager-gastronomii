@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4 text-success">✅ Faktura została zapisana!</h2>
+
+    <div class="card shadow p-4">
+        <h4>Dane faktury:</h4>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Data:</strong> {{ invoice.invoice_date }}</li>
+            <li class="list-group-item"><strong>Dostawca:</strong> {{ invoice.supplier_name }}</li>
+            <li class="list-group-item"><strong>NIP:</strong> {{ invoice.supplier_nip }}</li>
+            <li class="list-group-item"><strong>Kwota brutto:</strong> {{ invoice.gross_amount }} zł</li>
+            <li class="list-group-item"><strong>Kwota netto:</strong> {{ invoice.net_amount }} zł</li>
+            <li class="list-group-item"><strong>Kategoria:</strong> {{ invoice.category }}</li>
+        </ul>
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('add_invoice') }}" class="btn btn-primary btn-lg">Dodaj kolejną fakturę</a>
+            <a href="{{ url_for('home') }}" class="btn btn-secondary btn-lg ms-3">Wróć do menu</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for
 import os
 from utils.pdf_reader import parse_invoice_from_pdf
+from database import Session
+from models import Invoice
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -28,10 +31,33 @@ def add_daily():
 def add_invoice():
     if request.method == 'POST':
         form_data = request.form.to_dict()
-        print(form_data)
-        return redirect(url_for('home'))
-    # Jeśli GET - pusty formularz
+
+        invoice_date_str = form_data.get('purchase_date')
+        invoice_date = datetime.strptime(invoice_date_str, "%Y-%m-%d").date() if invoice_date_str else None
+
+        session = Session()
+        invoice = Invoice(
+            filename=form_data.get('filename', 'manual-entry'),
+            invoice_date=invoice_date,
+            gross_amount=float(form_data['gross_amount']),
+            net_amount=float(form_data.get('net_amount', 0)),
+            supplier_nip=form_data.get('supplier_nip', ''),
+            supplier_name=form_data.get('supplier', ''),
+            category=form_data['category']
+        )
+        session.add(invoice)
+        session.commit()
+
+        # Zapisz ID dodanej faktury
+        new_invoice_id = invoice.id
+
+        session.close()
+
+        # Przekieruj do nowej strony
+        return redirect(url_for('invoice_saved', invoice_id=new_invoice_id))
+
     return render_template('add_invoice.html', dane={})
+
 
 # Upload pliku PDF i automatyczne wypełnienie
 @app.route('/upload-invoice', methods=['POST'])
@@ -58,6 +84,19 @@ def upload_invoice():
 
     return render_template('add_invoice.html', dane=dane)
 
+#nowa trasa- zapisane faktury
+@app.route('/invoice-saved/<int:invoice_id>')
+def invoice_saved(invoice_id):
+    session = Session()
+    invoice = session.query(Invoice).get(invoice_id)
+    session.close()
+
+    if invoice:
+        return render_template('invoice_saved.html', invoice=invoice)
+    else:
+        return "Nie znaleziono faktury", 404
+
+
 
 @app.route('/daily-summary')
 def daily_summary():
@@ -71,6 +110,20 @@ def weekly_summary():
 def monthly_summary():
     return "Strona Podsumowania miesięcznego - jeszcze w budowie."
 
+
+#ŚCIEZKA TESTOWA- DO USUNIĘCIA
+@app.route('/test-invoices')
+def test_invoices():
+    session = Session()
+    invoices = session.query(Invoice).all()
+    session.close()
+
+    output = "<h2>Zapisane faktury:</h2><ul>"
+    for inv in invoices:
+        output += f"<li>{inv.invoice_date} – {inv.supplier_name} – {inv.gross_amount} zł – {inv.category}</li>"
+    output += "</ul>"
+
+    return output
 
 if __name__ == '__main__':
     app.run(debug=True)

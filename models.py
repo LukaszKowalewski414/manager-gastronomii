@@ -2,7 +2,7 @@
 #enum słuy do kategoryzacji, date do przechowywania dat
 
 from sqlalchemy import Column, Integer, Float, String, Date, Enum
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 import enum
 
 #wszystkie tabele muszą dziedziczyć po base zeby sql lite traktował
@@ -50,3 +50,34 @@ class Dostawca(Base):
     company_name = Column(String, nullable=False, unique=True)
     nip = Column(String, nullable=False)
     kategoria = Column(Enum(KategoriaFaktury), nullable=False)
+
+
+class Invoice(Base):
+    __tablename__ = 'invoices'
+
+    id = Column(Integer, primary_key=True)
+    filename = Column(String)
+    invoice_date = Column(Date)
+    gross_amount = Column(Float)
+    net_amount = Column(Float)
+    supplier_nip = Column(String)
+    supplier_name = Column(String)
+    category = Column(String)
+
+
+class Revenue(Base):
+    __tablename__ = 'revenues'
+
+    id = Column(Integer, primary_key=True)
+    revenue_date = Column(Date)
+    amount = Column(Float)
+    revenue_type = Column(String)
+
+
+class EmployeeCost(Base):
+    __tablename__ = 'employee_costs'
+
+    id = Column(Integer, primary_key=True)
+    cost_date = Column(Date)
+    amount = Column(Float)
+    department = Column(String)
