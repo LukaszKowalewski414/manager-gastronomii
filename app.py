@@ -2,14 +2,14 @@ from flask import Flask, render_template, request, redirect, url_for
 import os
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
-from models import Invoice
-from datetime import datetime
-
+from models import Revenue, Invoice
+from datetime import datetime, date
+from sqlalchemy import func
+from collections import defaultdict
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
-# Upewnij się, że folder uploads istnieje!
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Strona główna
@@ -58,6 +58,28 @@ def add_invoice():
 
     return render_template('add_invoice.html', dane={})
 
+#EDYCJA I USUWANIE FAKTUR
+@app.route('/edit_invoice/<int:invoice_id>', methods=['GET', 'POST'])
+def edit_invoice(invoice_id):
+    invoice = Session().query(Invoice).get(invoice_id)
+    if request.method == 'POST':
+        invoice.invoice_date = request.form['invoice_date']
+        invoice.gross_amount = float(request.form['gross_amount'])
+        invoice.supplier_name = request.form['supplier_name']
+        invoice.supplier_nip = request.form['supplier_nip']
+        invoice.category = request.form['category']
+        Session().commit()
+        return redirect(url_for('dashboard'))
+    return render_template('edit_invoice.html', invoice=invoice)
+
+@app.route('/delete_invoice/<int:invoice_id>', methods=['POST'])
+def delete_invoice(invoice_id):
+    session = Session()
+    invoice = session.query(Invoice).get(invoice_id)
+    session.delete(invoice)
+    session.commit()
+    return redirect(url_for('dashboard'))
+
 
 # Upload pliku PDF i automatyczne wypełnienie
 @app.route('/upload-invoice', methods=['POST'])
@@ -94,7 +116,73 @@ def invoice_saved(invoice_id):
     if invoice:
         return render_template('invoice_saved.html', invoice=invoice)
     else:
-        return "Nie znaleziono faktury", 404
+        return ("Nie znaleziono faktury", 404)
+
+@app.route('/monthly-summary')
+def monthly_summary():
+    start_date = date(2025, 4, 1)
+    end_date = date(2025, 4, 30)
+
+    session = Session()
+
+    # Faktury z danego miesiąca
+    invoices = session.query(Invoice).filter(
+        Invoice.invoice_date >= start_date,
+        Invoice.invoice_date <= end_date
+    ).all()
+
+    # Tymczasowe wartości podsumowania – tu wrzuć swój prawdziwy kod
+    summary = {
+        "total_revenue": 0,
+        "total_costs": 0,
+        "net_result": 0,
+        "cost_by_category": {}
+    }
+
+    return render_template(
+        "monthly_summary.html",
+        summary=summary,
+        invoices=invoices
+    )
+
+    # 1. Utargi
+    revenues = session.query(
+        Revenue.revenue_type,
+        func.sum(Revenue.amount)
+    ).filter(
+        Revenue.revenue_date >= start_date,
+        Revenue.revenue_date <= end_date
+    ).group_by(Revenue.revenue_type).all()
+
+    total_revenue = sum(amount for _, amount in revenues)
+
+    # 2. Koszty
+    invoices = session.query(
+        Invoice.category,
+        func.sum(Invoice.gross_amount)
+    ).filter(
+        Invoice.invoice_date >= start_date,
+        Invoice.invoice_date <= end_date
+    ).group_by(Invoice.category).all()
+
+    total_costs = sum(amount for _, amount in invoices)
+
+    # 3. Dane do wykresu
+    cost_by_category = {cat: float(amount) for cat, amount in invoices}
+
+    session.close()
+
+    # 4. Dane do szablonu
+    summary = {
+        'revenues': revenues,
+        'total_revenue': total_revenue,
+        'costs': invoices,
+        'total_costs': total_costs,
+        'net_result': total_revenue - total_costs,
+        'cost_by_category': cost_by_category
+    }
+
+    return render_template('monthly_summary.html', summary=summary)
 
 
 
@@ -106,24 +194,22 @@ def daily_summary():
 def weekly_summary():
     return "Strona Podsumowania tygodniowego - jeszcze w budowie."
 
-@app.route('/monthly-summary')
-def monthly_summary():
-    return "Strona Podsumowania miesięcznego - jeszcze w budowie."
 
 
-#ŚCIEZKA TESTOWA- DO USUNIĘCIA
+#TESTY- DO USUNIĘCIA
 @app.route('/test-invoices')
 def test_invoices():
     session = Session()
     invoices = session.query(Invoice).all()
     session.close()
 
-    output = "<h2>Zapisane faktury:</h2><ul>"
+    output = "<h2>Faktury w bazie</h2><ul>"
     for inv in invoices:
-        output += f"<li>{inv.invoice_date} – {inv.supplier_name} – {inv.gross_amount} zł – {inv.category}</li>"
+        output += f"<li>{inv.invoice_date} | {inv.supplier_name} | {inv.gross_amount} zł</li>"
     output += "</ul>"
 
     return output
+
 
 if __name__ == '__main__':
     app.run(debug=True)

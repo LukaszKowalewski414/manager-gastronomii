@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Edytuj Fakturę</h2>
+<form method="POST">
+    <label for="invoice_date">Data faktury:</label><br>
+    <input type="date" id="invoice_date" name="invoice_date" value="{{ invoice.invoice_date }}"><br><br>
+
+    <label for="gross_amount">Kwota brutto:</label><br>
+    <input type="number" step="0.01" id="gross_amount" name="gross_amount" value="{{ invoice.gross_amount }}"><br><br>
+
+    <label for="supplier_name">Nazwa dostawcy:</label><br>
+    <input type="text" id="supplier_name" name="supplier_name" value="{{ invoice.supplier_name }}"><br><br>
+
+    <label for="supplier_nip">NIP dostawcy:</label><br>
+    <input type="text" id="supplier_nip" name="supplier_nip" value="{{ invoice.supplier_nip }}"><br><br>
+
+    <label for="category">Kategoria:</label><br>
+    <input type="text" id="category" name="category" value="{{ invoice.category }}"><br><br>
+
+    <button type="submit">Zapisz zmiany</button>
+    <a href="{{ url_for('dashboard') }}">Anuluj</a>
+</form>
+{% endblock %}

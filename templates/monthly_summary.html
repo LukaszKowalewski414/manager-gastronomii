@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="mb-4 text-center text-primary">Podsumowanie – Kwiecień 2024</h2>
+
+    <!-- Karty z liczbami -->
+    <div class="row text-center mb-5">
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h5>💰 Suma utargów</h5>
+                <h3>{{ summary.total_revenue | round(2) }} zł</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h5>📉 Suma kosztów</h5>
+                <h3>{{ summary.total_costs | round(2) }} zł</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h5>📊 Wynik</h5>
+                <h3 class="{{ 'text-success' if summary.net_result >= 0 else 'text-danger' }}">
+                    {{ summary.net_result | round(2) }} zł
+                </h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wykresy -->
+    <div class="row mb-5">
+        <div class="col-md-6">
+            <canvas id="barChart"></canvas>
+        </div>
+        <div class="col-md-6">
+            <canvas id="pieChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Tabela kosztów -->
+    <h4 class="mb-3">Koszty według kategorii</h4>
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Kategoria</th>
+                <th>Kwota</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cat, amount in summary.cost_by_category.items() %}
+            <tr>
+                <td>{{ cat }}</td>
+                <td>{{ amount | round(2) }} zł</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const barChart = new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Utargi', 'Koszty'],
+            datasets: [{
+                label: 'zł',
+                data: [{{ summary.total_revenue }}, {{ summary.total_costs }}],
+                backgroundColor: ['#198754', '#dc3545']
+            }]
+        }
+    });
+
+    const pieChart = new Chart(document.getElementById('pieChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ summary.cost_by_category.keys() | list | tojson }},
+            datasets: [{
+                data: {{ summary.cost_by_category.values() | list | tojson }},
+                backgroundColor: [
+                    '#0d6efd', '#6610f2', '#6f42c1',
+                    '#198754', '#ffc107', '#dc3545'
+                ]
+            }]
+        }
+    });
+</script>
+
+
+<!-- Lista faktur -->
+<div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+    <h4 class="mb-0">Faktury za Kwiecień 2025</h4>
+    <a href="{{ url_for('add_invoice') }}" class="btn btn-primary btn-sm py-1 px-2">+ dodaj fakturę</a>
+</div>
+<table class="table table-striped">
+    <thead class="table-light">
+        <tr>
+            <th>Data</th>
+            <th>Kwota brutto</th>
+            <th>Dostawca</th>
+            <th>NIP</th>
+            <th>Kategoria</th>
+            <th>Akcje</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for invoice in invoices %}
+        <tr>
+            <td>{{ invoice.invoice_date }}</td>
+            <td>{{ invoice.gross_amount }} zł</td>
+            <td>{{ invoice.supplier_name }}</td>
+            <td>{{ invoice.supplier_nip }}</td>
+            <td>{{ invoice.category }}</td>
+            <td>
+                <a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-outline-secondary me-2">edytuj</a>
+                <form action="{{ url_for('delete_invoice', invoice_id=invoice.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Na pewno chcesz usunąć tę fakturę?')">usuń</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+{% endblock %}
