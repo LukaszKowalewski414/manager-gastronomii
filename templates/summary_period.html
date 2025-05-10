@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+  <h2 class="text-center text-primary mb-4">📆 Podsumowanie Okresowe</h2>
+
+  <form method="GET" action="{{ url_for('summary_period') }}" class="mb-4">
+
+    <div class="mb-3">
+      <label for="mode" class="form-label">Zakres:</label>
+      <select id="mode" name="mode" class="form-select" onchange="toggleDateInputs()">
+        <option value="weekly" {% if request.args.get('mode') == 'weekly' %}selected{% endif %}>Tygodniowe</option>
+        <option value="monthly" {% if request.args.get('mode') == 'monthly' %}selected{% endif %}>Miesięczne</option>
+        <option value="custom" {% if request.args.get('mode') == 'custom' %}selected{% endif %}>Niestandardowe</option>
+      </select>
+    </div>
+
+    <!-- Weekly -->
+    <div class="mb-3 date-input" id="weekly-input">
+      <label for="week_start" class="form-label">Początek tygodnia:</label>
+      <input type="date" name="week_start" class="form-control"
+             value="{{ request.args.get('week_start', '') }}">
+    </div>
+
+    <!-- Monthly -->
+    <div class="mb-3 date-input d-none" id="monthly-input">
+      <label for="month" class="form-label">Miesiąc:</label>
+      <input type="month" name="month" class="form-control"
+             value="{{ request.args.get('month', '') }}">
+    </div>
+
+    <!-- Custom range -->
+    <div class="mb-3 date-input d-none" id="custom-input">
+      <label class="form-label">Zakres dat:</label>
+      <input type="date" name="start_date" class="form-control mb-2"
+             value="{{ request.args.get('start_date', '') }}">
+      <input type="date" name="end_date" class="form-control"
+             value="{{ request.args.get('end_date', '') }}">
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Pokaż podsumowanie</button>
+  </form>
+
+  {% if summary %}
+  <h4 class="text-center mt-5">📊 Wyniki dla zakresu: {{ summary.range }}</h4>
+
+  <div class="mt-4">
+    <p><strong>💰 Przychody łącznie:</strong> {{ summary.total_income }} zł</p>
+    <p><strong>💸 Koszty łącznie:</strong> {{ summary.total_expenses }} zł</p>
+    <p><strong>🧾 Wynik netto:</strong> {{ summary.result }} zł</p>
+  </div>
+
+  <hr class="my-4">
+
+  <h5 class="text-center">📈 Przychody według kategorii:</h5>
+  <ul class="list-group mb-4">
+    {% for name, value in summary.income_breakdown.items() %}
+      <li class="list-group-item d-flex justify-content-between">
+        <span>{{ name }}</span>
+        <span>{{ value|round(2) }} zł</span>
+      </li>
+    {% endfor %}
+  </ul>
+
+  <h5 class="text-center">📉 Koszty według kategorii:</h5>
+  <ul class="list-group mb-4">
+    {% for name, value in summary.expense_breakdown.items() %}
+      <li class="list-group-item d-flex justify-content-between">
+        <span>{{ name }}</span>
+        <span>{{ value|round(2) }} zł</span>
+      </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+<script>
+function toggleDateInputs() {
+  const mode = document.getElementById("mode").value;
+  document.querySelectorAll(".date-input").forEach(div => div.classList.add("d-none"));
+  if (mode === "weekly") document.getElementById("weekly-input").classList.remove("d-none");
+  else if (mode === "monthly") document.getElementById("monthly-input").classList.remove("d-none");
+  else if (mode === "custom") document.getElementById("custom-input").classList.remove("d-none");
+}
+document.addEventListener("DOMContentLoaded", toggleDateInputs);
+</script>
+{% endblock %}

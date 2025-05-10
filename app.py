@@ -1,11 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for
-import os
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
-from models import Revenue, Invoice
-from datetime import datetime, date
+from models import Revenue, Invoice, RozliczenieDzien
+from datetime import datetime, date, timedelta
 from sqlalchemy import func
 from collections import defaultdict
+import os
+import json
+
+with open('utils/data/config.json') as f:
+    config = json.load(f)
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -16,15 +20,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 @app.route('/')
 def home():
     return render_template('home.html')
-
-# Dodawanie rozliczenia dnia
-@app.route('/add-daily', methods=['GET', 'POST'])
-def add_daily():
-    if request.method == 'POST':
-        form_data = request.form.to_dict()
-        print(form_data)
-        return redirect(url_for('home'))
-    return render_template('add_daily.html')
 
 # Dodawanie faktury ręcznie
 @app.route('/add-invoice', methods=['GET', 'POST'])
@@ -118,6 +113,43 @@ def invoice_saved(invoice_id):
     else:
         return ("Nie znaleziono faktury", 404)
 
+@app.route('/daily-summary', methods=['GET'])
+def daily_summary():
+    selected_date = request.args.get('data')
+    rozliczenie = None
+    wynik = None
+
+    if selected_date:
+        session = Session()
+        data_obj = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        rozliczenie = session.query(RozliczenieDzien).filter_by(data=data_obj).first()
+        session.close()
+
+        if rozliczenie:
+            przychody = sum([
+                rozliczenie.sprzedaz_bar or 0,
+                rozliczenie.sprzedaz_kuchnia or 0,
+                rozliczenie.sprzedaz_wejsciowki or 0,
+                rozliczenie.sprzedaz_inne or 0
+            ])
+            koszty = sum([
+                rozliczenie.koszt_bar or 0,
+                rozliczenie.koszt_kelnerzy or 0,
+                rozliczenie.koszt_kuchnia or 0,
+                rozliczenie.koszt_marketing or 0,
+                rozliczenie.koszt_ochrona or 0,
+                rozliczenie.koszt_inne or 0
+            ])
+            wynik = round(przychody - koszty, 2)
+
+    return render_template(
+        'daily_summary.html',
+        selected_date=selected_date,
+        rozliczenie=rozliczenie,
+        wynik=wynik
+    )
+
+
 @app.route('/monthly-summary')
 def monthly_summary():
     start_date = date(2025, 4, 1)
@@ -184,18 +216,6 @@ def monthly_summary():
 
     return render_template('monthly_summary.html', summary=summary)
 
-
-
-@app.route('/daily-summary')
-def daily_summary():
-    return "Strona Podsumowania dziennego - jeszcze w budowie."
-
-@app.route('/weekly-summary')
-def weekly_summary():
-    return "Strona Podsumowania tygodniowego - jeszcze w budowie."
-
-
-
 #TESTY- DO USUNIĘCIA
 @app.route('/test-invoices')
 def test_invoices():
@@ -209,6 +229,194 @@ def test_invoices():
     output += "</ul>"
 
     return output
+
+@app.route('/add_daily', methods=['GET', 'POST'])
+def add_daily():
+    if request.method == 'POST':
+        session = Session()
+
+        # Data
+        data_str = request.form.get('data')
+        data = datetime.strptime(data_str, '%Y-%m-%d').date()
+
+        existing = session.query(RozliczenieDzien).filter_by(data=data).first()
+        if existing:
+            session.close()
+            return render_template('daily_exists.html', data=data)
+
+        # Przygotowanie słownika z danymi
+        def get_kwota(field):
+            if request.form.get(field):
+                kwota = request.form.get(f"{field}_kwota")
+                return float(kwota) if kwota else 0
+            return 0
+
+        roz = RozliczenieDzien(
+            data=data,
+            # Przychody
+            sprzedaz_bar=get_kwota('sprzedaz_bar'),
+            sprzedaz_kuchnia=get_kwota('sprzedaz_kuchnia'),
+            sprzedaz_wejsciowki=get_kwota('sprzedaz_wejsciowki'),
+            sprzedaz_inne=get_kwota('sprzedaz_inne'),
+
+            # Koszty
+            koszt_bar=get_kwota('koszt_bar'),
+            koszt_kelnerzy=get_kwota('koszt_kelnerzy'),
+            koszt_kuchnia=get_kwota('koszt_kuchnia'),
+            koszt_ochrona=get_kwota('koszt_ochrona'),
+            koszt_marketing=get_kwota('koszt_marketing'),
+            koszt_marketing_komentarz=request.form.get('koszt_marketing_komentarz', ''),
+            koszt_inne=get_kwota('koszt_inne'),
+            koszt_inne_komentarz=request.form.get('koszt_inne_komentarz', ''),
+        )
+
+        session.add(roz)
+        session.commit()
+        session.close()
+
+        return redirect(url_for('daily_added'))
+
+    return render_template('add_daily.html', config=config)
+
+@app.route('/weekly-summary')
+def weekly_summary():
+    return "Podsumowanie tygodniowe – jeszcze w budowie."
+
+@app.route('/save-defaults', methods=['POST'])
+def save_defaults():
+    przychody = []
+    koszty = []
+
+    for field in ['bar', 'kuchnia', 'wejsciowki', 'inne']:
+        if request.form.get(f"sprzedaz_{field}"):
+            przychody.append(field)
+
+    for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona']:
+        if request.form.get(f"koszt_{field}"):
+            koszty.append(field)
+
+    if request.form.get("koszt_marketing"):
+        koszty.append("marketing")
+    if request.form.get("koszt_inne"):
+        koszty.append("inne")
+
+    new_config = {
+        "domyslne_przychody": przychody,
+        "domyslne_koszty": koszty
+    }
+
+    with open('utils/data/config.json', 'w') as f:
+        json.dump(new_config, f, indent=4)
+
+    return redirect(url_for('add_daily'))
+
+@app.route('/daily-added')
+def daily_added():
+    return render_template('daily_added.html')
+
+@app.route('/edit-daily/<data>', methods=['GET', 'POST'])
+def edit_daily(data):
+    session = Session()
+    data_obj = datetime.strptime(data, '%Y-%m-%d').date()
+    roz = session.query(RozliczenieDzien).filter_by(data=data_obj).first()
+
+    if request.method == 'POST':
+        def get_kwota(field):
+            return float(request.form.get(f"{field}_kwota", 0)) if request.form.get(field) else 0
+
+        roz.sprzedaz_bar = get_kwota('sprzedaz_bar')
+        roz.sprzedaz_kuchnia = get_kwota('sprzedaz_kuchnia')
+        roz.sprzedaz_wejsciowki = get_kwota('sprzedaz_wejsciowki')
+        roz.sprzedaz_inne = get_kwota('sprzedaz_inne')
+
+        roz.koszt_bar = get_kwota('koszt_bar')
+        roz.koszt_kelnerzy = get_kwota('koszt_kelnerzy')
+        roz.koszt_kuchnia = get_kwota('koszt_kuchnia')
+        roz.koszt_ochrona = get_kwota('koszt_ochrona')
+        roz.koszt_marketing = get_kwota('koszt_marketing')
+        roz.koszt_marketing_komentarz = request.form.get('koszt_marketing_komentarz', '')
+        roz.koszt_inne = get_kwota('koszt_inne')
+        roz.koszt_inne_komentarz = request.form.get('koszt_inne_komentarz', '')
+
+        session.commit()
+        session.close()
+        return redirect(url_for('daily_summary', data=data))
+
+    session.close()
+    roz_dict = {col.name: getattr(roz, col.name) for col in roz.__table__.columns}
+    return render_template('edit_daily.html', roz=roz_dict, data=data)
+
+@app.route("/summary/period", methods=["GET"])
+def summary_period():
+    mode = request.args.get("mode")
+    session = Session()
+    date_range = []
+    label = ""
+
+    if mode == "weekly":
+        start_date = request.args.get("week_start")
+        if start_date:
+            start = datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = start + timedelta(days=6)
+            label = f"{start} – {end}"
+            date_range = [start, end]
+
+    elif mode == "monthly":
+        month_str = request.args.get("month")
+        if month_str:
+            start = datetime.strptime(month_str, "%Y-%m").date()
+            next_month = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
+            end = next_month - timedelta(days=1)
+            label = f"{start.strftime('%B %Y')}"
+            date_range = [start, end]
+
+    elif mode == "custom":
+        start_str = request.args.get("start_date")
+        end_str = request.args.get("end_date")
+        if start_str and end_str:
+            start = datetime.strptime(start_str, "%Y-%m-%d").date()
+            end = datetime.strptime(end_str, "%Y-%m-%d").date()
+            label = f"{start} – {end}"
+            date_range = [start, end]
+
+    if date_range:
+        entries = session.query(RozliczenieDzien).filter(
+            RozliczenieDzien.data >= date_range[0],
+            RozliczenieDzien.data <= date_range[1]
+        ).all()
+
+        # Agregacja PRZYCHODÓW
+        income_breakdown = {
+            "Bar": sum(e.sprzedaz_bar or 0 for e in entries),
+            "Kuchnia": sum(e.sprzedaz_kuchnia or 0 for e in entries),
+            "Wejściówki": sum(e.sprzedaz_wejsciowki or 0 for e in entries),
+            "Inne": sum(e.sprzedaz_inne or 0 for e in entries),
+        }
+        total_income = sum(income_breakdown.values())
+
+        # Agregacja KOSZTÓW
+        expense_breakdown = {
+            "Obsługa baru": sum(e.koszt_bar or 0 for e in entries),
+            "Obsługa kelnerska": sum(e.koszt_kelnerzy or 0 for e in entries),
+            "Obsługa kuchni": sum(e.koszt_kuchnia or 0 for e in entries),
+            "Marketing": sum(e.koszt_marketing or 0 for e in entries),
+            "Ochrona": sum(e.koszt_ochrona or 0 for e in entries),
+            "Inne": sum(e.koszt_inne or 0 for e in entries),
+        }
+        total_expenses = sum(expense_breakdown.values())
+        result = total_income - total_expenses
+
+        return render_template("summary_period.html", summary={
+            "range": label,
+            "total_income": round(total_income, 2),
+            "total_expenses": round(total_expenses, 2),
+            "result": round(result, 2),
+            "income_breakdown": income_breakdown,
+            "expense_breakdown": expense_breakdown
+        })
+
+    return render_template("summary_period.html", summary=None)
+
 
 
 if __name__ == '__main__':

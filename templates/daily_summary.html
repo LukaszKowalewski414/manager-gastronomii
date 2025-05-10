@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center mb-4 text-primary">Podsumowanie dzienne</h2>
+
+    <form method="GET" action="{{ url_for('daily_summary') }}" class="mb-4">
+        <label for="data" class="form-label">Wybierz datę:</label>
+        <input type="date" id="data" name="data" class="form-control" required value="{{ selected_date }}">
+        <div class="text-center mt-3">
+            <button type="submit" class="btn btn-info">Pokaż</button>
+        </div>
+    </form>
+
+    {% if rozliczenie %}
+        <h4 class="mt-4">📅 {{ selected_date }}</h4>
+
+        <h5 class="mt-4">Przychody:</h5>
+        <ul>
+            <li>Sprzedaż bar: {{ rozliczenie.sprzedaz_bar }} zł</li>
+            <li>Sprzedaż kuchnia: {{ rozliczenie.sprzedaz_kuchnia }} zł</li>
+            <li>Sprzedaż wejściówki: {{ rozliczenie.sprzedaz_wejsciowki }} zł</li>
+            <li>Sprzedaż inne: {{ rozliczenie.sprzedaz_inne }} zł</li>
+        </ul>
+
+        <h5>Koszty:</h5>
+        <ul>
+            <li>Obsługa bar: {{ rozliczenie.koszt_bar }} zł</li>
+            <li>Obsługa kelnerska: {{ rozliczenie.koszt_kelnerzy }} zł</li>
+            <li>Obsługa kuchni: {{ rozliczenie.koszt_kuchnia }} zł</li>
+            <li>Marketing: {{ rozliczenie.koszt_marketing }} zł – {{ rozliczenie.koszt_marketing_komentarz }}</li>
+            <li>Ochrona: {{ rozliczenie.koszt_ochrona }} zł</li>
+            <li>Inne: {{ rozliczenie.koszt_inne }} zł – {{ rozliczenie.koszt_inne_komentarz }}</li>
+        </ul>
+
+        <h5 class="mt-4">💰 Wynik:</h5>
+        <p>
+            <strong>{{ wynik }} zł</strong> (przychody - koszty)
+        </p>
+    {% elif selected_date %}
+        <div class="alert alert-warning mt-4">Brak danych dla wybranej daty: {{ selected_date }}</div>
+    {% endif %}
+</div>
+{% endblock %}

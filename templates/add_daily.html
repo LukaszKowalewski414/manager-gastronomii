@@ -2,79 +2,109 @@
 
 {% block content %}
 <div class="container my-5">
-    <h2 class="text-center mb-4 text-primary">Dodaj rozliczenie dnia</h2>
+    <h2 class="text-center mb-4 text-primary">Dodaj rozliczenie dzienne</h2>
+
+    <!-- GŁÓWNY FORMULARZ - zapis rozliczenia -->
     <form method="POST" action="{{ url_for('add_daily') }}">
-
-        <!-- Data rozliczenia -->
-        <div class="mb-4">
-            <label for="date" class="form-label">Data rozliczenia</label>
-            <input type="date" id="date" name="date" class="form-control" required>
-        </div>
-
-        <!-- Utargi -->
-        <h4 class="mt-5 mb-3 text-secondary">Utargi</h4>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="bar_revenue" class="form-label">Utarg z baru</label>
-                <input type="number" step="0.01" id="bar_revenue" name="bar_revenue" class="form-control" required>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="restaurant_revenue" class="form-label">Utarg z sali</label>
-                <input type="number" step="0.01" id="restaurant_revenue" name="restaurant_revenue" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="tickets_revenue" class="form-label">Utarg z wejściówek</label>
-                <input type="number" step="0.01" id="tickets_revenue" name="tickets_revenue" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="other_revenue" class="form-label">Utarg inny</label>
-                <input type="number" step="0.01" id="other_revenue" name="other_revenue" class="form-control">
-            </div>
-        </div>
-
-        <!-- Koszty pracowników -->
-        <h4 class="mt-5 mb-3 text-secondary">Koszty pracowników</h4>
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="bar_staff_cost" class="form-label">Bar</label>
-                <input type="number" step="0.01" id="bar_staff_cost" name="bar_staff_cost" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="waiters_cost" class="form-label">Kelnerzy</label>
-                <input type="number" step="0.01" id="waiters_cost" name="waiters_cost" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="cooks_cost" class="form-label">Kucharze</label>
-                <input type="number" step="0.01" id="cooks_cost" name="cooks_cost" class="form-control">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="marketing_cost" class="form-label">Marketing</label>
-                <input type="number" step="0.01" id="marketing_cost" name="marketing_cost" class="form-control">
-            </div>
-            <div class="col-12 mb-3">
-                <label for="other_staff_cost" class="form-label">Inne koszty pracowników</label>
-                <input type="number" step="0.01" id="other_staff_cost" name="other_staff_cost" class="form-control">
-                <label for="other_staff_description" class="form-label mt-2">Opis innych kosztów</label>
-                <input type="text" id="other_staff_description" name="other_staff_description" class="form-control">
-            </div>
-        </div>
-
-        <!-- Wydatki dodatkowe -->
-        <h4 class="mt-5 mb-3 text-secondary">Wydatki dodatkowe</h4>
         <div class="mb-3">
-            <label for="additional_expenses" class="form-label">Kwota wydatków</label>
-            <input type="number" step="0.01" id="additional_expenses" name="additional_expenses" class="form-control">
-        </div>
-        <div class="mb-4">
-            <label for="additional_expenses_description" class="form-label">Opis wydatków</label>
-            <input type="text" id="additional_expenses_description" name="additional_expenses_description" class="form-control">
+            <label for="data" class="form-label">Data</label>
+            <input type="date" id="data" name="data" class="form-control" required>
         </div>
 
-        <!-- Przycisk Zapisz -->
-        <div class="text-center">
-            <button type="submit" class="btn btn-success btn-lg px-5">Zapisz</button>
+        <h5>Przychody</h5>
+        {% for field in ['bar', 'kuchnia', 'wejsciowki', 'inne'] %}
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="sprzedaz_{{ field }}" name="sprzedaz_{{ field }}"
+                   {% if field in config.domyslne_przychody %}checked{% endif %}>
+            <label class="form-check-label" for="sprzedaz_{{ field }}">Sprzedaż {{ field }}</label>
+            <input type="number" step="0.01" class="form-control mt-1" name="sprzedaz_{{ field }}_kwota" placeholder="Kwota (zł)">
+        </div>
+        {% endfor %}
+
+        <hr>
+        <h5>Koszty</h5>
+        {% for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona'] %}
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="koszt_{{ field }}" name="koszt_{{ field }}"
+                   {% if field in config.domyslne_koszty %}checked{% endif %}>
+            <label class="form-check-label" for="koszt_{{ field }}">Obsługa {{ field }}</label>
+            <input type="number" step="0.01" class="form-control mt-1" name="koszt_{{ field }}_kwota" placeholder="Kwota (zł)">
+        </div>
+        {% endfor %}
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="koszt_marketing" name="koszt_marketing"
+                   {% if 'marketing' in config.domyslne_koszty %}checked{% endif %}>
+            <label class="form-check-label" for="koszt_marketing">Marketing</label>
+            <input type="number" step="0.01" class="form-control mt-1" name="koszt_marketing_kwota" placeholder="Kwota (zł)">
+            <input type="text" class="form-control mt-1" name="koszt_marketing_komentarz" placeholder="Komentarz (opcjonalny)">
         </div>
 
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="koszt_inne" name="koszt_inne"
+                   {% if 'inne' in config.domyslne_koszty %}checked{% endif %}>
+            <label class="form-check-label" for="koszt_inne">Inne</label>
+            <input type="number" step="0.01" class="form-control mt-1" name="koszt_inne_kwota" placeholder="Kwota (zł)">
+            <input type="text" class="form-control mt-1" name="koszt_inne_komentarz" placeholder="Komentarz (opcjonalny)">
+        </div>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-success btn-lg">💾 Zapisz rozliczenie dnia</button>
+        </div>
+    </form>
+
+    <!-- FORMULARZ POMOCNICZY - zapis domyślnych checkboxów -->
+    <form method="POST" action="{{ url_for('save_defaults') }}">
+        <!-- Musi zawierać checkboxy, które chcesz zapisać jako domyślne -->
+        {% for field in ['bar', 'kuchnia', 'wejsciowki', 'inne'] %}
+            <input type="hidden" name="sprzedaz_{{ field }}" value="1"
+                   {% if field in config.domyslne_przychody %}checked{% endif %}
+                   id="hidden_sprzedaz_{{ field }}">
+        {% endfor %}
+        {% for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona'] %}
+            <input type="hidden" name="koszt_{{ field }}" value="1"
+                   {% if field in config.domyslne_koszty %}checked{% endif %}
+                   id="hidden_koszt_{{ field }}">
+        {% endfor %}
+        <input type="hidden" name="koszt_marketing" value="1" id="hidden_koszt_marketing"
+               {% if 'marketing' in config.domyslne_koszty %}checked{% endif %}>
+        <input type="hidden" name="koszt_inne" value="1" id="hidden_koszt_inne"
+               {% if 'inne' in config.domyslne_koszty %}checked{% endif %}>
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-outline-primary">⚙️ Zapisz te ustawienia jako domyślne</button>
+        </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const checkboxes = document.querySelectorAll('.form-check-input');
+
+    checkboxes.forEach(function (checkbox) {
+        toggleRelatedFields(checkbox);
+
+        checkbox.addEventListener('change', function () {
+            toggleRelatedFields(checkbox);
+            // Ustaw hidden checkbox w drugim formularzu
+            const hidden = document.getElementById('hidden_' + checkbox.id);
+            if (hidden) {
+                if (checkbox.checked) {
+                    hidden.disabled = false;
+                } else {
+                    hidden.disabled = true;
+                }
+            }
+        });
+    });
+
+    function toggleRelatedFields(checkbox) {
+        const container = checkbox.closest('.form-check');
+        const inputs = container.querySelectorAll('.form-control');
+        inputs.forEach(input => {
+            input.style.display = checkbox.checked ? 'block' : 'none';
+        });
+    }
+});
+</script>
 {% endblock %}
