@@ -1,10 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'base.html' %}
+{% block content %}
+<div class="container text-center my-5">
+    <h2 class="text-warning mb-4">⚠️ Rozliczenie na ten dzień już istnieje</h2>
+    <p>Dla daty <strong>{{ data }}</strong> zapisano już rozliczenie.</p>
+    <a href="{{ url_for('edit_daily', data=data) }}" class="btn btn-info btn-lg mx-2">✏️ Edytuj rozliczenie</a>
+    <a href="{{ url_for('home') }}" class="btn btn-secondary btn-lg mx-2">🏠 Wróć do menu</a>
+</div>
+{% endblock %}

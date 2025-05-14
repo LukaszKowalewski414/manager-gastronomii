@@ -81,3 +81,25 @@ class EmployeeCost(Base):
     cost_date = Column(Date)
     amount = Column(Float)
     department = Column(String)
+
+class RozliczenieDzien(Base):
+    __tablename__ = 'rozliczenia_dzienne'
+
+    id = Column(Integer, primary_key=True)
+    data = Column(Date, nullable=False, unique=True)
+
+    # Przychody
+    sprzedaz_bar = Column(Float)
+    sprzedaz_kuchnia = Column(Float)
+    sprzedaz_wejsciowki = Column(Float)
+    sprzedaz_inne = Column(Float)
+
+    # Koszty
+    koszt_bar = Column(Float)
+    koszt_kelnerzy = Column(Float)
+    koszt_kuchnia = Column(Float)
+    koszt_marketing = Column(Float)
+    koszt_marketing_komentarz = Column(String)
+    koszt_ochrona = Column(Float)
+    koszt_inne = Column(Float)
+    koszt_inne_komentarz = Column(String)

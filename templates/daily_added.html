@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% extends 'base.html' %}
+{% block content %}
+<div class="container text-center my-5">
+    <h2 class="text-success mb-4">✅ Rozliczenie dnia zostało zapisane!</h2>
+    <a href="{{ url_for('add_daily') }}" class="btn btn-primary btn-lg mx-2">➕ Dodaj kolejne</a>
+    <a href="{{ url_for('home') }}" class="btn btn-secondary btn-lg mx-2">🏠 Wróć do menu głównego</a>
+</div>
+{% endblock %}

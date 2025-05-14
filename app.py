@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
 from models import Revenue, Invoice, RozliczenieDzien
-from datetime import datetime, date, timedelta
+import datetime
 from sqlalchemy import func
 from collections import defaultdict
 import os
@@ -21,14 +21,15 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 def home():
     return render_template('home.html')
 
-# Dodawanie faktury ręcznie
 @app.route('/add-invoice', methods=['GET', 'POST'])
 def add_invoice():
+    import datetime
+
     if request.method == 'POST':
         form_data = request.form.to_dict()
 
         invoice_date_str = form_data.get('purchase_date')
-        invoice_date = datetime.strptime(invoice_date_str, "%Y-%m-%d").date() if invoice_date_str else None
+        invoice_date = datetime.datetime.strptime(invoice_date_str, "%Y-%m-%d").date() if invoice_date_str else None
 
         session = Session()
         invoice = Invoice(
@@ -43,29 +44,33 @@ def add_invoice():
         session.add(invoice)
         session.commit()
 
-        # Zapisz ID dodanej faktury
         new_invoice_id = invoice.id
-
         session.close()
 
-        # Przekieruj do nowej strony
         return redirect(url_for('invoice_saved', invoice_id=new_invoice_id))
 
     return render_template('add_invoice.html', dane={})
 
-#EDYCJA I USUWANIE FAKTUR
+
 @app.route('/edit_invoice/<int:invoice_id>', methods=['GET', 'POST'])
 def edit_invoice(invoice_id):
-    invoice = Session().query(Invoice).get(invoice_id)
+    import datetime
+    session = Session()
+    invoice = session.query(Invoice).get(invoice_id)
+
     if request.method == 'POST':
-        invoice.invoice_date = request.form['invoice_date']
+        invoice.invoice_date = datetime.datetime.strptime(request.form['invoice_date'], "%Y-%m-%d").date()
         invoice.gross_amount = float(request.form['gross_amount'])
         invoice.supplier_name = request.form['supplier_name']
         invoice.supplier_nip = request.form['supplier_nip']
         invoice.category = request.form['category']
-        Session().commit()
+        session.commit()
+        session.close()
         return redirect(url_for('dashboard'))
+
+    session.close()
     return render_template('edit_invoice.html', invoice=invoice)
+
 
 @app.route('/delete_invoice/<int:invoice_id>', methods=['POST'])
 def delete_invoice(invoice_id):
@@ -121,7 +126,7 @@ def daily_summary():
 
     if selected_date:
         session = Session()
-        data_obj = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        data_obj = datetime.datetime.strptime(selected_date, '%Y-%m-%d').date()
         rozliczenie = session.query(RozliczenieDzien).filter_by(data=data_obj).first()
         session.close()
 
@@ -149,33 +154,26 @@ def daily_summary():
         wynik=wynik
     )
 
+from flask import request  # dodaj na górze
 
 @app.route('/monthly-summary')
 def monthly_summary():
-    start_date = date(2025, 4, 1)
-    end_date = date(2025, 4, 30)
+    import datetime  # Upewniamy się, że mamy pełny import
+
+    selected_year = int(request.args.get('year', 2025))
+    selected_month = int(request.args.get('month', 4))
+
+    # Wylicz zakres dat na podstawie wybranego miesiąca
+    start_date = datetime.date(selected_year, selected_month, 1)
+    if selected_month == 12:
+        end_date = datetime.date(selected_year + 1, 1, 1) - datetime.timedelta(days=1)
+    else:
+        end_date = datetime.date(selected_year, selected_month + 1, 1) - datetime.timedelta(days=1)
 
     session = Session()
 
-    # Faktury z danego miesiąca
-    invoices = session.query(Invoice).filter(
-        Invoice.invoice_date >= start_date,
-        Invoice.invoice_date <= end_date
-    ).all()
-
-    # Tymczasowe wartości podsumowania – tu wrzuć swój prawdziwy kod
-    summary = {
-        "total_revenue": 0,
-        "total_costs": 0,
-        "net_result": 0,
-        "cost_by_category": {}
-    }
-
-    return render_template(
-        "monthly_summary.html",
-        summary=summary,
-        invoices=invoices
-    )
+    # 🔍 DEBUG (możesz usunąć później)
+    print(f"▶️ Podsumowanie dla: {start_date} – {end_date}")
 
     # 1. Utargi
     revenues = session.query(
@@ -188,8 +186,8 @@ def monthly_summary():
 
     total_revenue = sum(amount for _, amount in revenues)
 
-    # 2. Koszty
-    invoices = session.query(
+    # 2. Koszty – agregacja do wykresów
+    costs_by_category = session.query(
         Invoice.category,
         func.sum(Invoice.gross_amount)
     ).filter(
@@ -197,10 +195,14 @@ def monthly_summary():
         Invoice.invoice_date <= end_date
     ).group_by(Invoice.category).all()
 
-    total_costs = sum(amount for _, amount in invoices)
+    total_costs = sum(amount for _, amount in costs_by_category)
+    cost_by_category = {cat: float(amount) for cat, amount in costs_by_category}
 
-    # 3. Dane do wykresu
-    cost_by_category = {cat: float(amount) for cat, amount in invoices}
+    # 3. Lista faktur do wyświetlenia w tabeli
+    invoices = session.query(Invoice).filter(
+        Invoice.invoice_date >= start_date,
+        Invoice.invoice_date <= end_date
+    ).all()
 
     session.close()
 
@@ -208,27 +210,22 @@ def monthly_summary():
     summary = {
         'revenues': revenues,
         'total_revenue': total_revenue,
-        'costs': invoices,
+        'costs': costs_by_category,
         'total_costs': total_costs,
         'net_result': total_revenue - total_costs,
         'cost_by_category': cost_by_category
     }
 
-    return render_template('monthly_summary.html', summary=summary)
+    return render_template(
+        'monthly_summary.html',
+        summary=summary,
+        invoices=invoices,
+        selected_month=selected_month,
+        selected_year=selected_year
+    )
 
-#TESTY- DO USUNIĘCIA
-@app.route('/test-invoices')
-def test_invoices():
-    session = Session()
-    invoices = session.query(Invoice).all()
-    session.close()
 
-    output = "<h2>Faktury w bazie</h2><ul>"
-    for inv in invoices:
-        output += f"<li>{inv.invoice_date} | {inv.supplier_name} | {inv.gross_amount} zł</li>"
-    output += "</ul>"
 
-    return output
 
 @app.route('/add_daily', methods=['GET', 'POST'])
 def add_daily():
@@ -237,7 +234,7 @@ def add_daily():
 
         # Data
         data_str = request.form.get('data')
-        data = datetime.strptime(data_str, '%Y-%m-%d').date()
+        data = datetime.datetime.strptime(data_str, '%Y-%m-%d').date()
 
         existing = session.query(RozliczenieDzien).filter_by(data=data).first()
         if existing:
@@ -317,7 +314,7 @@ def daily_added():
 @app.route('/edit-daily/<data>', methods=['GET', 'POST'])
 def edit_daily(data):
     session = Session()
-    data_obj = datetime.strptime(data, '%Y-%m-%d').date()
+    data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
     roz = session.query(RozliczenieDzien).filter_by(data=data_obj).first()
 
     if request.method == 'POST':
@@ -356,17 +353,17 @@ def summary_period():
     if mode == "weekly":
         start_date = request.args.get("week_start")
         if start_date:
-            start = datetime.strptime(start_date, "%Y-%m-%d").date()
-            end = start + timedelta(days=6)
+            start = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+            end = start + datetime.timedelta(days=6)
             label = f"{start} – {end}"
             date_range = [start, end]
 
     elif mode == "monthly":
         month_str = request.args.get("month")
         if month_str:
-            start = datetime.strptime(month_str, "%Y-%m").date()
-            next_month = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
-            end = next_month - timedelta(days=1)
+            start = datetime.datetime.strptime(month_str, "%Y-%m").date()
+            next_month = (start.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
+            end = next_month - datetime.timedelta(days=1)
             label = f"{start.strftime('%B %Y')}"
             date_range = [start, end]
 
@@ -374,8 +371,8 @@ def summary_period():
         start_str = request.args.get("start_date")
         end_str = request.args.get("end_date")
         if start_str and end_str:
-            start = datetime.strptime(start_str, "%Y-%m-%d").date()
-            end = datetime.strptime(end_str, "%Y-%m-%d").date()
+            start = datetime.datetime.strptime(start_str, "%Y-%m-%d").date()
+            end = datetime.datetime.strptime(end_str, "%Y-%m-%d").date()
             label = f"{start} – {end}"
             date_range = [start, end]
 
@@ -416,6 +413,37 @@ def summary_period():
         })
 
     return render_template("summary_period.html", summary=None)
+
+@app.route('/sync-revenue')
+def sync_revenue():
+    import datetime
+    session = Session()
+
+    rozliczenia = session.query(RozliczenieDzien).all()
+    dodano = 0
+
+    for r in rozliczenia:
+        suma = sum([
+            r.sprzedaz_bar or 0,
+            r.sprzedaz_kuchnia or 0,
+            r.sprzedaz_wejsciowki or 0,
+            r.sprzedaz_inne or 0
+        ])
+
+        # Nie dodawaj, jeśli suma to 0
+        if suma > 0:
+            session.add(Revenue(
+                revenue_date=r.data,
+                amount=suma,
+                revenue_type='Z dziennych rozliczeń'
+            ))
+            dodano += 1
+
+    session.commit()
+    session.close()
+
+    return f"✅ Zsynchronizowano {dodano} rekordów do tabeli Revenue."
+
 
 
 

@@ -1,8 +1,41 @@
 {% extends 'base.html' %}
 
 {% block content %}
+
+{% set MONTHS = {
+    1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
+    5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
+    9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
+} %}
+
 <div class="container my-5">
-    <h2 class="mb-4 text-center text-primary">Podsumowanie – Kwiecień 2024</h2>
+
+    <!-- Formularz wyboru miesiąca i roku -->
+    <form method="get" action="{{ url_for('monthly_summary') }}" class="mb-4 text-center">
+        <h2 class="text-primary mb-3">Podsumowanie – {{ MONTHS[selected_month] }} {{ selected_year }}</h2>
+
+        <div class="d-inline-block me-2">
+            <label for="month">Miesiąc:</label>
+            <select name="month" id="month" class="form-select d-inline w-auto">
+                {% for m in range(1, 13) %}
+                    <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
+                        {{ MONTHS[m] }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="d-inline-block me-2">
+            <label for="year">Rok:</label>
+            <select name="year" id="year" class="form-select d-inline w-auto">
+                {% for y in range(2023, 2026) %}
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary ms-2">Pokaż</button>
+    </form>
 
     <!-- Karty z liczbami -->
     <div class="row text-center mb-5">
@@ -88,10 +121,9 @@
     });
 </script>
 
-
 <!-- Lista faktur -->
 <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-    <h4 class="mb-0">Faktury za Kwiecień 2025</h4>
+    <h4 class="mb-0">Faktury za {{ MONTHS[selected_month] }} {{ selected_year }}</h4>
     <a href="{{ url_for('add_invoice') }}" class="btn btn-primary btn-sm py-1 px-2">+ dodaj fakturę</a>
 </div>
 <table class="table table-striped">
@@ -123,6 +155,5 @@
         {% endfor %}
     </tbody>
 </table>
-
 
 {% endblock %}
