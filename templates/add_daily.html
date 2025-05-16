@@ -49,13 +49,14 @@
         </div>
 
         <div class="text-center mt-4">
-            <button type="submit" class="btn btn-success btn-lg">💾 Zapisz rozliczenie dnia</button>
+            <button type="submit" class="btn btn-success btn-lg px-5 mb-3">
+                 Zapisz rozliczenie dnia
+            </button>
         </div>
     </form>
 
     <!-- FORMULARZ POMOCNICZY - zapis domyślnych checkboxów -->
     <form method="POST" action="{{ url_for('save_defaults') }}">
-        <!-- Musi zawierać checkboxy, które chcesz zapisać jako domyślne -->
         {% for field in ['bar', 'kuchnia', 'wejsciowki', 'inne'] %}
             <input type="hidden" name="sprzedaz_{{ field }}" value="1"
                    {% if field in config.domyslne_przychody %}checked{% endif %}
@@ -71,8 +72,10 @@
         <input type="hidden" name="koszt_inne" value="1" id="hidden_koszt_inne"
                {% if 'inne' in config.domyslne_koszty %}checked{% endif %}>
 
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-outline-primary">⚙️ Zapisz te ustawienia jako domyślne</button>
+        <div class="text-center">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                ⚙️ Zapisz obecne ustawienia jako domyślne
+            </button>
         </div>
     </form>
 </div>
@@ -86,14 +89,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         checkbox.addEventListener('change', function () {
             toggleRelatedFields(checkbox);
-            // Ustaw hidden checkbox w drugim formularzu
             const hidden = document.getElementById('hidden_' + checkbox.id);
             if (hidden) {
-                if (checkbox.checked) {
-                    hidden.disabled = false;
-                } else {
-                    hidden.disabled = true;
-                }
+                hidden.disabled = !checkbox.checked;
             }
         });
     });

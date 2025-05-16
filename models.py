@@ -56,13 +56,14 @@ class Invoice(Base):
     __tablename__ = 'invoices'
 
     id = Column(Integer, primary_key=True)
-    filename = Column(String)
-    invoice_date = Column(Date)
-    gross_amount = Column(Float)
-    net_amount = Column(Float)
-    supplier_nip = Column(String)
-    supplier_name = Column(String)
-    category = Column(String)
+    date = Column(Date, nullable=False)
+    amount_gross = Column(Float, nullable=False)
+    amount_net = Column(Float, nullable=True)
+    supplier = Column(String, nullable=True)
+    nip = Column(String, nullable=True)
+    category = Column(String, nullable=True)
+    lokal = Column(String, nullable=False, default='Rokoko 2.0')  # <--- DODAJ TO
+
 
 
 class Revenue(Base):
@@ -103,3 +104,7 @@ class RozliczenieDzien(Base):
     koszt_ochrona = Column(Float)
     koszt_inne = Column(Float)
     koszt_inne_komentarz = Column(String)
+
+    # Nowe pole – lokal
+    lokal = Column(String, nullable=False, default='Rokoko 2.0')
+

@@ -8,7 +8,6 @@ from database import Session
 from models import Faktura
 from datetime import datetime
 
-# 🔥 NOWA funkcja - dodawanie faktury z pliku PDF
 
 def dodaj_fakture_z_pdf():
     nazwa = input("\n📄 Podaj nazwę pliku PDF (z folderu Faktury/): ").strip()
@@ -44,8 +43,6 @@ def dodaj_fakture_z_pdf():
 
     print("✅ Faktura zapisana do bazy.")
 
-
-# 🔥 Zmienione menu() - dodano opcję 5
 
 def menu():
     while True:

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
 from models import Revenue, Invoice, RozliczenieDzien
@@ -10,11 +10,11 @@ import json
 from utils.nip_utils import get_category_for_nip, save_category_for_nip
 
 
-
 with open('utils/data/config.json') as f:
     config = json.load(f)
 
 app = Flask(__name__)
+app.secret_key = "Sbc3394left!"
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -42,7 +42,8 @@ def add_invoice():
             net_amount=float(form_data.get('net_amount', 0)),
             supplier_nip=form_data.get('supplier_nip', ''),
             supplier_name=form_data.get('supplier', ''),
-            category=form_data['category']
+            category=form_data['category'],
+            lokal=session['lokal']  # ✅ DODANE
         )
         session.add(invoice)
         session.commit()
@@ -150,10 +151,11 @@ def daily_summary():
     wynik = None
 
     if selected_date:
-        session = Session()
+        session_db = Session()
         data_obj = datetime.datetime.strptime(selected_date, '%Y-%m-%d').date()
-        rozliczenie = session.query(RozliczenieDzien).filter_by(data=data_obj).first()
-        session.close()
+
+        # ✅ Pobieramy rozliczenie tylko z aktywnego lokalu
+        rozliczenie = session_db.query(RozliczenieDzien).filter_by(data=data_obj, lokal=session['lokal']).first()
 
         if rozliczenie:
             przychody = sum([
@@ -172,6 +174,8 @@ def daily_summary():
             ])
             wynik = round(przychody - koszty, 2)
 
+        session_db.close()
+
     return render_template(
         'daily_summary.html',
         selected_date=selected_date,
@@ -179,59 +183,58 @@ def daily_summary():
         wynik=wynik
     )
 
-from flask import request  # dodaj na górze
 
 @app.route('/monthly-summary')
 def monthly_summary():
-    import datetime  # Upewniamy się, że mamy pełny import
+    import datetime
 
     selected_year = int(request.args.get('year', 2025))
     selected_month = int(request.args.get('month', 4))
 
-    # Wylicz zakres dat na podstawie wybranego miesiąca
     start_date = datetime.date(selected_year, selected_month, 1)
     if selected_month == 12:
         end_date = datetime.date(selected_year + 1, 1, 1) - datetime.timedelta(days=1)
     else:
         end_date = datetime.date(selected_year, selected_month + 1, 1) - datetime.timedelta(days=1)
 
-    session = Session()
+    session_db = Session()
 
-    # 🔍 DEBUG (możesz usunąć później)
-    print(f"▶️ Podsumowanie dla: {start_date} – {end_date}")
+    print(f"▶️ Podsumowanie dla: {start_date} – {end_date}, lokal: {session['lokal']}")
 
-    # 1. Utargi
-    revenues = session.query(
+    # 1. Utargi – tylko z aktywnego lokalu
+    revenues = session_db.query(
         Revenue.revenue_type,
         func.sum(Revenue.amount)
     ).filter(
         Revenue.revenue_date >= start_date,
-        Revenue.revenue_date <= end_date
+        Revenue.revenue_date <= end_date,
+        Revenue.lokal == session['lokal']
     ).group_by(Revenue.revenue_type).all()
 
     total_revenue = sum(amount for _, amount in revenues)
 
-    # 2. Koszty – agregacja do wykresów
-    costs_by_category = session.query(
+    # 2. Koszty – tylko z faktur z aktywnego lokalu
+    costs_by_category = session_db.query(
         Invoice.category,
         func.sum(Invoice.gross_amount)
     ).filter(
         Invoice.invoice_date >= start_date,
-        Invoice.invoice_date <= end_date
+        Invoice.invoice_date <= end_date,
+        Invoice.lokal == session['lokal']
     ).group_by(Invoice.category).all()
 
     total_costs = sum(amount for _, amount in costs_by_category)
     cost_by_category = {cat: float(amount) for cat, amount in costs_by_category}
 
-    # 3. Lista faktur do wyświetlenia w tabeli
-    invoices = session.query(Invoice).filter(
+    # 3. Lista faktur – tylko z aktywnego lokalu
+    invoices = session_db.query(Invoice).filter(
         Invoice.invoice_date >= start_date,
-        Invoice.invoice_date <= end_date
+        Invoice.invoice_date <= end_date,
+        Invoice.lokal == session['lokal']
     ).all()
 
-    session.close()
+    session_db.close()
 
-    # 4. Dane do szablonu
     summary = {
         'revenues': revenues,
         'total_revenue': total_revenue,
@@ -248,8 +251,6 @@ def monthly_summary():
         selected_month=selected_month,
         selected_year=selected_year
     )
-
-
 
 
 @app.route('/add_daily', methods=['GET', 'POST'])
@@ -275,13 +276,10 @@ def add_daily():
 
         roz = RozliczenieDzien(
             data=data,
-            # Przychody
             sprzedaz_bar=get_kwota('sprzedaz_bar'),
             sprzedaz_kuchnia=get_kwota('sprzedaz_kuchnia'),
             sprzedaz_wejsciowki=get_kwota('sprzedaz_wejsciowki'),
             sprzedaz_inne=get_kwota('sprzedaz_inne'),
-
-            # Koszty
             koszt_bar=get_kwota('koszt_bar'),
             koszt_kelnerzy=get_kwota('koszt_kelnerzy'),
             koszt_kuchnia=get_kwota('koszt_kuchnia'),
@@ -290,6 +288,7 @@ def add_daily():
             koszt_marketing_komentarz=request.form.get('koszt_marketing_komentarz', ''),
             koszt_inne=get_kwota('koszt_inne'),
             koszt_inne_komentarz=request.form.get('koszt_inne_komentarz', ''),
+            lokal=session['lokal']  # ✅ DODANE
         )
 
         session.add(roz)
@@ -404,7 +403,8 @@ def summary_period():
     if date_range:
         entries = session.query(RozliczenieDzien).filter(
             RozliczenieDzien.data >= date_range[0],
-            RozliczenieDzien.data <= date_range[1]
+            RozliczenieDzien.data <= date_range[1],
+            RozliczenieDzien.lokal == session['lokal']
         ).all()
 
         # Agregacja PRZYCHODÓW
@@ -468,6 +468,17 @@ def sync_revenue():
     session.close()
 
     return f"✅ Zsynchronizowano {dodano} rekordów do tabeli Revenue."
+
+@app.route('/set-lokal', methods=['POST'])
+def set_lokal():
+    session['lokal'] = request.form['lokal']
+    return redirect(request.referrer or url_for('index'))
+
+@app.before_request
+def set_default_lokal():
+    if 'lokal' not in session:
+        session['lokal'] = 'Rokoko 2.0'
+
 
 if __name__ == '__main__':
     app.run(debug=True)

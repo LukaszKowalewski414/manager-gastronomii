@@ -1,9 +1,10 @@
 import fitz
 import os
 import re
+import pdfplumber
 from datetime import datetime
 
-# ─── helpery do wyboru nazwy firmy ────────────────────────────────────────────
+# ─── HELPERY DO NAZWY FIRMY ──────────────────────────────────────────────────
 
 forbidden_keywords = {
     "faktura", "nr", "bdo", "opłaty", "usługi", "dostawy", "zakończenia",
@@ -13,12 +14,9 @@ forbidden_keywords = {
 
 def is_valid_candidate(line: str) -> bool:
     l = line.strip()
-    # wyklucza linie zaczynające się od cyfry (np. kod pocztowy)
-    if l and l[0].isdigit():
-        return False
     if not (3 < len(l) < 100 and l.count(" ") >= 1):
         return False
-    if l.endswith(":"):
+    if l[0].isdigit() or l.endswith(":"):
         return False
     if sum(1 for c in l if c.isupper()) < 2:
         return False
@@ -30,186 +28,203 @@ def is_valid_candidate(line: str) -> bool:
     return True
 
 def score_candidate(line: str) -> int:
-    # liczba wielkich liter + liczba spacji
     return sum(1 for c in line if c.isupper()) + line.count(" ")
 
 def extract_company_name(lines: list[str], nip_idx: int) -> str | None:
     window = 4
     above = lines[max(0, nip_idx - window): nip_idx]
     below = lines[nip_idx + 1: nip_idx + 1 + window]
-
-    valid_above = [l for l in above if is_valid_candidate(l)]
-    if valid_above:
-        return max(valid_above, key=score_candidate).strip()
-
-    valid_below = [l for l in below if is_valid_candidate(l)]
-    if valid_below:
-        return max(valid_below, key=score_candidate).strip()
-
+    candidates = [l for l in above + below if is_valid_candidate(l)]
+    if candidates:
+        return max(candidates, key=score_candidate).strip()
     return None
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-
-def czytaj_pdf(sciezka):
-    if not os.path.exists(sciezka):
-        print("❌ Nie znaleziono pliku:", sciezka)
-        return
-
-    dokument = fitz.open(sciezka)
-    tekst_caly = ""
-
-    for strona in dokument:
-        tekst_caly += strona.get_text()
-
-    dokument.close()
-    return tekst_caly
-
-
-def oczysc_kwote(tekst):
-    tekst = tekst.lower().replace("pln", "").replace("zł", "")
-    tekst = tekst.replace("\u00A0", "").replace(" ", "")
-    tekst = tekst.replace(".", "")
-    tekst = tekst.replace(",", ".")
-
-    print(f"🧪 RAW: {repr(tekst)}")
-
-    try:
-        return round(float(tekst), 2)
-    except:
-        print("❌ Dalej błąd przy konwersji:", tekst)
+def czytaj_pdf(path: str) -> str | None:
+    if not os.path.exists(path):
+        print("❌ Nie znaleziono pliku:", path)
         return None
+    doc = fitz.open(path)
+    text = "".join(page.get_text("text") for page in doc)
+    doc.close()
+    return text
 
-def wyciagnij_date_z_tekstu(tekst):
-    """
-    Wyszukuje datę wystawienia faktury na podstawie słów kluczowych.
-    """
-    linie = [linia.strip().replace(":", " ") for linia in tekst.split("\n")]
-    potencjalne_linie = []
-    wzorce_slow = ["data faktury", "data wystawienia", "faktura z dnia", "wystawiono"]
+def extract_net_sum_with_pdfplumber(path: str) -> float | None:
+    total = 0.0
+    found = False
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            for table in page.extract_tables():
+                header = [cell.strip().lower() if cell else "" for cell in table[0]]
+                idx = next((i for i,h in enumerate(header) if h == "netto"), None)
+                if idx is None:
+                    idx = next((i for i,h in enumerate(header) if "netto" in h), None)
+                if idx is None:
+                    continue
+                for row in table[1:]:
+                    cell = row[idx]
+                    if not cell:
+                        continue
+                    num = re.sub(r"[^\d,\.]", "", cell)
+                    if "." in num and "," in num:
+                        num = num.replace(".", "").replace(",", ".")
+                    else:
+                        num = num.replace(",", ".")
+                    try:
+                        total += float(num)
+                        found = True
+                    except:
+                        pass
+    return total if found and total > 0 else None
 
-    for i, linia in enumerate(linie):
-        if any(w in linia.lower() for w in wzorce_slow):
-            print(f"🟡 Znaleziono linię z kontekstem daty: {linia}")
-            potencjalne_linie.append(linia)
-            if i + 1 < len(linie):
-                print(f"➕ Dodaję również następną linię: {linie[i + 1]}")
-                potencjalne_linie.append(linie[i + 1])
-
-    for linia in potencjalne_linie:
-        print(f"🔍 Analizuję linię z datą: {linia.strip()}")
-        daty = re.findall(r"\d{2}[.\-\/]\d{2}[.\-\/]\d{4}|\d{4}[.\-\/]\d{2}[.\-\/]\d{2}", linia)
-        print(f"📆 Znalezione daty: {daty}")
-        for d in daty:
+def wyciagnij_date_z_tekstu(text: str) -> str:
+    lines = [l.strip().replace(":", " ") for l in text.split("\n")]
+    patterns = ["data faktury", "data wystawienia", "faktura z dnia", "wystawiono"]
+    for i, line in enumerate(lines):
+        low = line.lower()
+        if any(p in low for p in patterns):
+            if "termin" in low:
+                continue
+            # sprawdz tę i następną linię
+            for cand in (line, lines[i+1] if i+1 < len(lines) else ""):
+                for d in re.findall(r"\d{2}[.\-/]\d{2}[.\-/]\d{4}|\d{4}[.\-/]\d{2}[.\-/]\d{2}", cand):
+                    for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d-%m-%Y"):
+                        try:
+                            return datetime.strptime(d.replace(" ", "").replace(",", "."), fmt).date().isoformat()
+                        except ValueError:
+                            continue
+    # fallback globalny, ale skip linie z 'termin'
+    for i, line in enumerate(lines):
+        if "termin" in line.lower():
+            continue
+        for d in re.findall(r"\d{2}[.\-/]\d{2}[.\-/]\d{4}|\d{4}[.\-/]\d{2}[.\-/]\d{2}", line):
             for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d-%m-%Y"):
                 try:
-                    parsed_date = datetime.strptime(d.replace(" ", "").replace(",", "."), fmt).date()
-                    print(f"✅ Udało się sparsować: {parsed_date}")
-                    return parsed_date.isoformat()
+                    return datetime.strptime(d.replace(" ", "").replace(",", "."), fmt).date().isoformat()
                 except ValueError:
                     continue
-
-    # 🔹 DEBUG 3: Fallback – gdy brak linii kontekstowych
-    print("⚠️ Używam fallbacku – przeszukuję cały tekst...")
-    fallback = re.findall(r"\d{2}[.\-\/]\d{2}[.\-\/]\d{4}|\d{4}[.\-\/]\d{2}[.\-\/]\d{2}", tekst)
-    print(f"📋 Daty w fallbacku: {fallback}")
-    for d in fallback:
-        for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d-%m-%Y"):
-            try:
-                parsed_date = datetime.strptime(d.replace(" ", "").replace(",", "."), fmt).date()
-                print(f"✅ Fallback parsowanie: {parsed_date}")
-                return parsed_date.isoformat()
-            except ValueError:
-                continue
-
-    print("❌ Nie znaleziono żadnej daty.")
     return "–"
 
-
-
-def wyciagnij_dane_z_pdf(tekst):
+def wyciagnij_dane_z_pdf(text: str, path: str) -> dict:
     dane = {
         "data": "–",
-        "kwota": "–",
+        "kwota brutto": "–",
+        "kwota netto": "–",
         "nip": "–",
         "firma": "–"
     }
+    lines = text.split("\n")
 
-    linie = tekst.split("\n")
+    # 1️⃣ Data
+    dane["data"] = wyciagnij_date_z_tekstu(text)
 
-    # === SZUKANIE DATY (nowa funkcja z kontekstem) ===
-    dane["data"] = wyciagnij_date_z_tekstu(tekst)
-
-    # === SZUKANIE KWOTY (agresywne + czyszczenie i kontekst) ===
-    kwoty_znalezione = []
-    linie = tekst.split("\n")
-
-    for i, linia in enumerate(linie):
-        if any(klucz in linia.lower() for klucz in
-               ["brutto", "do zapłaty", "suma", "razem", "kwota", "wartość", "łącznie"]):
-            kandydatki = [linia]
-            if i + 1 < len(linie):
-                kandydatki.append(linie[i + 1])
-            for k in kandydatki:
-                matchy = re.findall(r"\d{1,3}(?:[., ]\d{3})*[.,]\d{2}", k)
-                for m in matchy:
-                    print(f"🔎 Znaleziona kwota surowa: {m} w linii: {k}")
-                    czyszczona = (
-                        m.replace(" ", "")
-                         .replace("zł", "")
-                         .replace("PLN", "")
-                         .replace("\u00A0", "")
-                         .replace(".", "")
-                         .replace(",", ".")
-                    )
+    # 2️⃣ Brutto
+    brutto_vals = []
+    for i, line in enumerate(lines):
+        low = line.lower()
+        if any(k in low for k in ["brutto", "do zapłaty"]):
+            block = [line] + ([lines[i+1]] if i+1 < len(lines) else [])
+            for b in block:
+                if "%" in b:
+                    continue
+                for m in re.findall(r"\d{1,3}(?:[., ]\d{3})*[.,]\d{2}", b):
+                    s = m.replace(" ", "").replace("zł", "").replace("pln", "") \
+                         .replace("\u00A0", "").replace(".", "").replace(",", ".")
                     try:
-                        liczba = float(czyszczona)
-                        kwoty_znalezione.append(liczba)
-                        print(f"✅ Zamieniono na float: {liczba}")
-                    except ValueError:
-                        print(f"❌ Błąd przy konwersji: {czyszczona}")
+                        brutto_vals.append(float(s))
+                    except:
+                        pass
+    if brutto_vals:
+        mb = max(brutto_vals)
+        dane["kwota brutto"] = f"{mb:.2f}"
+    brutto = float(dane["kwota brutto"]) if dane["kwota brutto"] != "–" else None
+    # wymagamy, że netto >= 70% brutto
+    threshold = brutto * 0.7 if brutto else 0
 
-    if kwoty_znalezione:
-        dane["kwota"] = f"{max(kwoty_znalezione):.2f}"
-        print(f"✅ Wybrana największa kwota: {dane['kwota']}")
+    # 3️⃣ Netto z tabeli
+    net_sum = extract_net_sum_with_pdfplumber(path)
+    if net_sum is not None and brutto is not None and threshold <= net_sum <= brutto:
+        dane["kwota netto"] = f"{net_sum:.2f}"
+    else:
+        # 4️⃣ Brutto - VAT
+        for i, line in enumerate(lines):
+            low = line.lower()
+            if "podatek vat" in low or "wartość vat" in low:
+                for w in lines[i+1 : i+11]:
+                    if "%" in w:
+                        continue
+                    m = re.search(r"\d{1,3}(?:[., ]\d{3})*[.,]\d{2}", w)
+                    if m and brutto is not None:
+                        vat_s = m.group(0).replace(" ", "").replace("zł", "").replace("pln", "") \
+                                      .replace("\u00A0", "").replace(".", "").replace(",", ".")
+                        try:
+                            vat = float(vat_s)
+                            net = brutto - vat
+                        except:
+                            continue
+                        if threshold <= net <= brutto:
+                            dane["kwota netto"] = f"{net:.2f}"
+                            break
+                if dane["kwota netto"] != "–":
+                    break
+        # 5️⃣ Numeric-only summary fallback
+        if dane["kwota netto"] == "–" and brutto is not None:
+            for line in lines:
+                m = re.match(r"^\s*(\d{1,3}(?:[., ]\d{3})*[.,]\d{2})\s*(?:zł)?\s*$",
+                             line.strip(), flags=re.IGNORECASE)
+                if not m:
+                    continue
+                num_s = m.group(1).replace(" ", "").replace("\u00A0", "")
+                if "." in num_s and "," in num_s:
+                    num_s = num_s.replace(".", "").replace(",", ".")
+                else:
+                    num_s = num_s.replace(",", ".")
+                try:
+                    v = float(num_s)
+                except ValueError:
+                    continue
+                if threshold <= v <= brutto:
+                    dane["kwota netto"] = f"{v:.2f}"
+                    break
 
-    # ─── znajdź NIP SPRZEDAWCY i nazwę FIRMY ───────────────────────
-    dane["nip"] = "–"
-    dane["firma"] = "–"
-
-    # skanuj cały dokument aż znajdziesz pierwszy poprawny NIP
-    for i, linia in enumerate(linie):
-        m = re.search(r"(?:PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", linia)
-        if not m:
-            continue
-        nip_raw = m.group(1)
-        czysty = nip_raw.replace(" ", "").replace("-", "")
-        if len(czysty) == 10 and czysty.isdigit():
-            dane["nip"] = czysty
-            print(f"✅ Znalazłem NIP sprzedawcy: {czysty}")
-            # teraz jedna funkcja, która wybiera firmę z okolic tej linii
-            nazwa = extract_company_name(linie, i)
-            if nazwa:
-                dane["firma"] = nazwa
-                print(f"🏢 Trafiona firma: {dane['firma']}")
-            else:
-                print("⚠️ Nie znalazłem nazwy firmy w 4 liniach od NIP-u sprzedawcy")
-            break
-    # ───────────────────────────────────────────────────────────────
-
-
-    # Skróć firmę, jeśli zawiera przecinki – weź tylko pierwszy człon
-    if "," in dane["firma"]:
-        dane["firma"] = dane["firma"].split(",")[0].strip()
-        print(f"✂️ Skrócona firma: {dane['firma']}")
-
+    # 6️⃣ NIP i nazwa sprzedawcy
+    # najpierw szukamy sekcji "sprzedawca"
+    found = False
+    for i, line in enumerate(lines):
+        if "sprzedawca" in line.lower():
+            for w in lines[i:i+10]:
+                m = re.search(r"(?:PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", w)
+                if m:
+                    nip = m.group(1).replace(" ", "").replace("-", "")
+                    if len(nip) == 10 and nip.isdigit():
+                        dane["nip"] = nip
+                        idx = lines.index(w)
+                        firma = extract_company_name(lines, idx)
+                        if firma:
+                            dane["firma"] = firma.split(",")[0].strip()
+                        found = True
+                        break
+            if found:
+                break
+    # fallback: pierwszy poprawny NIP
+    if not found:
+        for i, line in enumerate(lines):
+            m = re.search(r"(?:PL)?\s*[:\-]?\s*(\d[\d\-\s]{8,15})", line)
+            if not m:
+                continue
+            nip = m.group(1).replace(" ", "").replace("-", "")
+            if len(nip) == 10 and nip.isdigit():
+                dane["nip"] = nip
+                firma = extract_company_name(lines, i)
+                if firma:
+                    dane["firma"] = firma.split(",")[0].strip()
+                break
 
     return dane
 
-#DOPISANE ZEBY WGRYWAC FAKTURY Z PLIKU - JAK COŚ SIĘ ZEPSUJE TO USUWAMY
-def parse_invoice_from_pdf(file_path):
-    tekst = czytaj_pdf(file_path)
-    if not tekst:
+def parse_invoice_from_pdf(path: str) -> dict | None:
+    text = czytaj_pdf(path)
+    if text is None:
         return None
-    dane = wyciagnij_dane_z_pdf(tekst)
-    return dane
+    return wyciagnij_dane_z_pdf(text, path)
