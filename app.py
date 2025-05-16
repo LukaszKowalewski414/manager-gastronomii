@@ -49,6 +49,7 @@ def add_invoice():
 
         return redirect(url_for('invoice_saved', invoice_id=new_invoice_id))
 
+    # 👇 TEN RETURN DODAJ lub popraw
     return render_template('add_invoice.html', dane={})
 
 
@@ -81,7 +82,6 @@ def delete_invoice(invoice_id):
     return redirect(url_for('dashboard'))
 
 
-# Upload pliku PDF i automatyczne wypełnienie
 @app.route('/upload-invoice', methods=['POST'])
 def upload_invoice():
     if 'pdf_file' not in request.files:
@@ -101,10 +101,19 @@ def upload_invoice():
     if not dane:
         print("⚠️ Parser zwrócił None albo pusty słownik!")
         dane = {}
-    else:
-        print("✅ Dane sparsowane z faktury:", dane)
+
+    print("✅ Dane sparsowane z faktury:", dane)
+
+    # 🔁 Mapujemy kwoty na klucze, których używa HTML
+    dane["gross_amount"] = dane.get("kwota brutto", "")
+    dane["net_amount"] = dane.get("kwota netto", "")
+
+    # Dodajemy nazwę pliku
+    dane["filename"] = pdf_file.filename
 
     return render_template('add_invoice.html', dane=dane)
+
+
 
 #nowa trasa- zapisane faktury
 @app.route('/invoice-saved/<int:invoice_id>')
@@ -443,9 +452,6 @@ def sync_revenue():
     session.close()
 
     return f"✅ Zsynchronizowano {dodano} rekordów do tabeli Revenue."
-
-
-
 
 if __name__ == '__main__':
     app.run(debug=True)
