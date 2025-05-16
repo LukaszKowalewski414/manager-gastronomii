@@ -1,24 +1,68 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block content %}
-<h2>Edytuj Fakturę</h2>
-<form method="POST">
-    <label for="invoice_date">Data faktury:</label><br>
-    <input type="date" id="invoice_date" name="invoice_date" value="{{ invoice.invoice_date }}"><br><br>
+<div class="container my-5">
+    <h2 class="text-center mb-4 text-primary">Edytuj fakturę</h2>
 
-    <label for="gross_amount">Kwota brutto:</label><br>
-    <input type="number" step="0.01" id="gross_amount" name="gross_amount" value="{{ invoice.gross_amount }}"><br><br>
+    <form method="POST">
+        <!-- Data -->
+        <div class="mb-4">
+            <label for="invoice_date" class="form-label">Data zakupu</label>
+            <input type="date" id="invoice_date" name="invoice_date" class="form-control" value="{{ invoice.invoice_date }}" required>
+        </div>
 
-    <label for="supplier_name">Nazwa dostawcy:</label><br>
-    <input type="text" id="supplier_name" name="supplier_name" value="{{ invoice.supplier_name }}"><br><br>
+        <!-- Dostawca -->
+        <div class="mb-4">
+            <label for="supplier_name" class="form-label">Dostawca</label>
+            <input type="text" id="supplier_name" name="supplier_name" class="form-control" value="{{ invoice.supplier_name }}" required>
+        </div>
 
-    <label for="supplier_nip">NIP dostawcy:</label><br>
-    <input type="text" id="supplier_nip" name="supplier_nip" value="{{ invoice.supplier_nip }}"><br><br>
+        <!-- NIP -->
+        <div class="mb-4">
+            <label for="supplier_nip" class="form-label">NIP dostawcy</label>
+            <input type="text" id="supplier_nip" name="supplier_nip" class="form-control" value="{{ invoice.supplier_nip }}">
+        </div>
 
-    <label for="category">Kategoria:</label><br>
-    <input type="text" id="category" name="category" value="{{ invoice.category }}"><br><br>
+        <!-- Kwoty -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label for="net_amount" class="form-label">Kwota netto</label>
+                <input type="number" step="0.01" id="net_amount" name="net_amount" class="form-control" value="{{ invoice.net_amount }}">
+            </div>
+            <div class="col-md-6">
+                <label for="gross_amount" class="form-label">Kwota brutto</label>
+                <input type="number" step="0.01" id="gross_amount" name="gross_amount" class="form-control" value="{{ invoice.gross_amount }}" required>
+            </div>
+        </div>
 
-    <button type="submit">Zapisz zmiany</button>
-    <a href="{{ url_for('dashboard') }}">Anuluj</a>
-</form>
+        <!-- Numer faktury -->
+        <div class="mb-4">
+            <label for="invoice_number" class="form-label">Numer faktury (opcjonalnie)</label>
+            <input type="text" id="invoice_number" name="invoice_number" class="form-control" value="{{ invoice.invoice_number }}">
+        </div>
+
+        <!-- Opis -->
+        <div class="mb-4">
+            <label for="description" class="form-label">Opis faktury / kosztu</label>
+            <input type="text" id="description" name="description" class="form-control" value="{{ invoice.description }}">
+        </div>
+
+        <!-- Kategoria -->
+        <div class="mb-4">
+            <label for="category" class="form-label">Kategoria</label>
+            <select id="category" name="category" class="form-select" required>
+                <option value="">Wybierz kategorię...</option>
+                {% for option in ['Towar', 'Pracownicy', 'Utrzymanie lokalu', 'Marketing', 'Podatki', 'Inne'] %}
+                    <option value="{{ option }}" {% if invoice.category == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Przyciski -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-success btn-lg px-5">Zapisz zmiany</button>
+            <a href="{{ url_for('monthly_summary') }}" class="btn btn-link">Anuluj</a>
+        </div>
+    </form>
+</div>
 {% endblock %}

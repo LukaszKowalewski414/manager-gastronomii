@@ -7,6 +7,9 @@ from sqlalchemy import func
 from collections import defaultdict
 import os
 import json
+from utils.nip_utils import get_category_for_nip, save_category_for_nip
+
+
 
 with open('utils/data/config.json') as f:
     config = json.load(f)
@@ -44,6 +47,9 @@ def add_invoice():
         session.add(invoice)
         session.commit()
 
+        if invoice.supplier_nip and invoice.category:
+            save_category_for_nip(invoice.supplier_nip, invoice.category)
+
         new_invoice_id = invoice.id
         session.close()
 
@@ -65,9 +71,12 @@ def edit_invoice(invoice_id):
         invoice.supplier_name = request.form['supplier_name']
         invoice.supplier_nip = request.form['supplier_nip']
         invoice.category = request.form['category']
+        invoice.net_amount = float(request.form.get('net_amount', 0))
+        invoice.invoice_number = request.form.get('invoice_number', '')
+        invoice.description = request.form.get('description', '')
         session.commit()
         session.close()
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('monthly_summary'))
 
     session.close()
     return render_template('edit_invoice.html', invoice=invoice)
@@ -79,7 +88,7 @@ def delete_invoice(invoice_id):
     invoice = session.query(Invoice).get(invoice_id)
     session.delete(invoice)
     session.commit()
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('monthly_summary'))
 
 
 @app.route('/upload-invoice', methods=['POST'])
@@ -101,6 +110,13 @@ def upload_invoice():
     if not dane:
         print("⚠️ Parser zwrócił None albo pusty słownik!")
         dane = {}
+
+    # Automatyczna kategoria po NIP
+    nip = dane.get("nip")
+    if nip:
+        kat = get_category_for_nip(nip)
+        if kat:
+            dane["category"] = kat
 
     print("✅ Dane sparsowane z faktury:", dane)
 
