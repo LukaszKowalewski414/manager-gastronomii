@@ -24,7 +24,8 @@ header h4 {
 }
 
 /* Główne przyciski */
-.btn-primary, .btn-warning {
+.btn-primary,
+.btn-warning {
     padding: 1rem 2rem;
     font-size: 1.5rem;
     border-radius: 12px;
@@ -37,8 +38,72 @@ header h4 {
     border-radius: 10px;
 }
 
+/* 🆕 Mniejszy przycisk ostrzeżenia */
+.btn-warning-sm {
+    background-color: #ffc107;
+    color: black;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-warning-sm:hover {
+    background-color: #e0a800;
+}
+
 /* Stopka */
 footer {
     margin-top: auto;
     padding: 1rem 0;
 }
+
+/* 🆕 Mniejsze przyciski specjalne */
+.btn-warning-sm {
+    background-color: #ffc107;
+    color: black;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-warning-sm:hover {
+    background-color: #e0a800;
+}
+
+.btn-outline-secondary-sm {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-outline-secondary-sm:hover {
+    background-color: #e2e6ea;
+    color: #343a40;
+}
+
+.btn-primary-sm {
+    background-color: #0d6efd;
+    color: white;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: none;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary-sm:hover {
+    background-color: #0b5ed7;
+}
+

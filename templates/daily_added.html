@@ -1,8 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container text-center my-5">
-    <h2 class="text-success mb-4">✅ Rozliczenie dnia zostało zapisane!</h2>
-    <a href="{{ url_for('add_daily') }}" class="btn btn-primary btn-lg mx-2">➕ Dodaj kolejne</a>
-    <a href="{{ url_for('home') }}" class="btn btn-secondary btn-lg mx-2">🏠 Wróć do menu głównego</a>
+
+    <h4 class="text-success mb-4" style="font-weight: 600;">
+        ✅ Rozliczenie dnia zostało zapisane!
+    </h4>
+
+    <div class="d-flex justify-content-center gap-3 mt-3">
+        <a href="{{ url_for('add_daily') }}" class="btn-primary-sm">Dodaj kolejne</a>
+        <a href="{{ url_for('home') }}" class="btn-outline-secondary-sm">Wróć do menu</a>
+    </div>
+
 </div>
 {% endblock %}
