@@ -120,8 +120,44 @@ def invoice_saved(invoice_id):
 
 @app.route('/add_daily', methods=['GET', 'POST'])
 def add_daily():
+    # 🔹 Załaduj aktualne ustawienia checkboxów
+    with open('utils/data/config.json') as f:
+        config = json.load(f)
+
     if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'save_defaults':
+            # 🔧 Zapisz domyślne ustawienia
+            przychody = []
+            koszty = []
+
+            for field in ['bar', 'kuchnia', 'wejsciowki', 'inne']:
+                if request.form.get(f"sprzedaz_{field}"):
+                    przychody.append(field)
+
+            for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona']:
+                if request.form.get(f"koszt_{field}"):
+                    koszty.append(field)
+
+            if request.form.get("koszt_marketing"):
+                koszty.append("marketing")
+            if request.form.get("koszt_inne"):
+                koszty.append("inne")
+
+            new_config = {
+                "domyslne_przychody": przychody,
+                "domyslne_koszty": koszty
+            }
+
+            with open('utils/data/config.json', 'w') as f:
+                json.dump(new_config, f, indent=4)
+
+            return redirect(url_for('add_daily'))
+
+        # 🔹 Jeśli kliknięto "Zapisz rozliczenie dnia"
         db_session = Session()
+
         data_str = request.form.get('data')
         daily_date = datetime.datetime.strptime(data_str, '%Y-%m-%d').date()
 
@@ -160,6 +196,7 @@ def add_daily():
         return redirect(url_for('daily_added'))
 
     return render_template('add_daily.html', config=config)
+
 
 @app.route('/daily-added')
 def daily_added():
@@ -435,6 +472,9 @@ def save_defaults():
 
     with open('utils/data/config.json', 'w') as f:
         json.dump(new_config, f, indent=4)
+
+    print("NOWE USTAWIENIA:")
+    print(new_config)
 
     return redirect(url_for('add_daily'))
 
