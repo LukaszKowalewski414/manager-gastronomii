@@ -396,9 +396,9 @@ def edit_daily(data):
         roz.cost_kitchen = get_kwota('koszt_kuchnia')
         roz.cost_security = get_kwota('koszt_ochrona')
         roz.cost_marketing = get_kwota('koszt_marketing')
-        roz.comment_marketing = request.form.get('koszt_marketing_komentarz', '')
+        roz.cost_marketing_comment = request.form.get('koszt_marketing_komentarz', '')
         roz.cost_other = get_kwota('koszt_inne')
-        roz.comment_other = request.form.get('koszt_inne_komentarz', '')
+        roz.cost_other_comment = request.form.get('koszt_inne_komentarz', '')
 
         db_session.commit()
         db_session.close()
