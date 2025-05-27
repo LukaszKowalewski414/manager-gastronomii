@@ -20,7 +20,13 @@
             <li>Sprzedaż bar: {{ rozliczenie.revenue_bar or 0 }} zł</li>
             <li>Sprzedaż kuchnia: {{ rozliczenie.revenue_kitchen or 0 }} zł</li>
             <li>Sprzedaż wejściówki: {{ rozliczenie.revenue_entry or 0 }} zł</li>
-            <li>Sprzedaż inne: {{ rozliczenie.revenue_other or 0 }} zł</li>
+            <li>
+                Sprzedaż inne: {{ rozliczenie.revenue_other or 0 }} zł
+                {% if rozliczenie.revenue_other_comment %}
+                    – <em>{{ rozliczenie.revenue_other_comment }}</em>
+                {% endif %}
+            </li>
+
         </ul>
 
         <h5>Koszty:</h5>

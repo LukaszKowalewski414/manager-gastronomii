@@ -128,22 +128,17 @@ def add_daily():
         action = request.form.get('action')
 
         if action == 'save_defaults':
-            # 🔧 Zapisz domyślne ustawienia
+            # 🔧 Zapisz domyślne ustawienia checkboxów
             przychody = []
             koszty = []
 
             for field in ['bar', 'kuchnia', 'wejsciowki', 'inne']:
-                if request.form.get(f"sprzedaz_{field}"):
+                if request.form.get(f"sprzedaz_{field}") == 'on':
                     przychody.append(field)
 
-            for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona']:
-                if request.form.get(f"koszt_{field}"):
+            for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona', 'marketing', 'inne']:
+                if request.form.get(f"koszt_{field}") == 'on':
                     koszty.append(field)
-
-            if request.form.get("koszt_marketing"):
-                koszty.append("marketing")
-            if request.form.get("koszt_inne"):
-                koszty.append("inne")
 
             new_config = {
                 "domyslne_przychody": przychody,
@@ -155,46 +150,55 @@ def add_daily():
 
             return redirect(url_for('add_daily'))
 
-        # 🔹 Jeśli kliknięto "Zapisz rozliczenie dnia"
-        db_session = Session()
+        elif action == 'save_daily':
+            db_session = Session()
 
-        data_str = request.form.get('data')
-        daily_date = datetime.datetime.strptime(data_str, '%Y-%m-%d').date()
+            data_str = request.form.get('data')
+            if not data_str:
+                return "Brak daty – nie można zapisać rozliczenia", 400
 
-        existing = db_session.query(RozliczenieDzien).filter_by(daily_date=daily_date).first()
-        if existing:
+            daily_date = datetime.datetime.strptime(data_str, '%Y-%m-%d').date()
+
+            # 🔄 Sprawdź, czy taki dzień już istnieje
+            existing = db_session.query(RozliczenieDzien).filter_by(daily_date=daily_date).first()
+            if existing:
+                db_session.close()
+                return render_template('daily_exists.html', data=data_str)
+
+            # 📦 Stwórz nowe rozliczenie
+            roz = RozliczenieDzien(daily_date=daily_date)
+
+            def get_kwota(field):
+                val = request.form.get(f"kwota_{field}")
+                try:
+                    return float(val) if val else 0.0
+                except ValueError:
+                    return 0.0
+
+            # Przychody
+            roz.revenue_bar = get_kwota('sprzedaz_bar')
+            roz.revenue_kitchen = get_kwota('sprzedaz_kuchnia')
+            roz.revenue_entry = get_kwota('sprzedaz_wejsciowki')
+            roz.revenue_other = get_kwota('sprzedaz_inne')
+            roz.revenue_other_comment = request.form.get('sprzedaz_inne_komentarz')
+
+            # Koszty
+            roz.cost_bar = get_kwota('koszt_bar')
+            roz.cost_waiters = get_kwota('koszt_kelnerzy')
+            roz.cost_kitchen = get_kwota('koszt_kuchnia')
+            roz.cost_marketing = get_kwota('koszt_marketing')
+            roz.cost_marketing_comment = request.form.get('koszt_marketing_komentarz')
+            roz.cost_security = get_kwota('koszt_ochrona')
+            roz.cost_other = get_kwota('koszt_inne')
+            roz.cost_other_comment = request.form.get('koszt_inne_komentarz')
+
+            db_session.add(roz)
+            db_session.commit()
             db_session.close()
-            return render_template('daily_exists.html', data=data_str)
 
-        def get_kwota(field):
-            if request.form.get(field):
-                kwota = request.form.get(f"{field}_kwota")
-                return float(kwota) if kwota else 0
-            return 0
+            return redirect(url_for('daily_summary', data=data_str))
 
-        roz = RozliczenieDzien(
-            daily_date=daily_date,
-            revenue_bar=get_kwota('sprzedaz_bar'),
-            revenue_kitchen=get_kwota('sprzedaz_kuchnia'),
-            revenue_entry=get_kwota('sprzedaz_wejsciowki'),
-            revenue_other=get_kwota('sprzedaz_inne'),
-            cost_bar=get_kwota('koszt_bar'),
-            cost_waiters=get_kwota('koszt_kelnerzy'),
-            cost_kitchen=get_kwota('koszt_kuchnia'),
-            cost_security=get_kwota('koszt_ochrona'),
-            cost_marketing=get_kwota('koszt_marketing'),
-            comment_marketing=request.form.get('koszt_marketing_komentarz', ''),
-            cost_other=get_kwota('koszt_inne'),
-            comment_other=request.form.get('koszt_inne_komentarz', ''),
-            lokal=session['lokal']
-        )
-
-        db_session.add(roz)
-        db_session.commit()
-        db_session.close()
-
-        return redirect(url_for('daily_added'))
-
+    # 🔹 Jeśli GET – pokaż formularz
     return render_template('add_daily.html', config=config)
 
 

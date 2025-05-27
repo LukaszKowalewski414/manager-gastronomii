@@ -96,15 +96,16 @@ class RozliczenieDzien(Base):
     revenue_kitchen = Column(Float, default=0.0)
     revenue_entry = Column(Float, default=0.0)
     revenue_other = Column(Float, default=0.0)
+    revenue_other_comment = Column(String, nullable=True)
 
     # Koszty
     cost_bar = Column(Float, default=0.0)
     cost_waiters = Column(Float, default=0.0)
     cost_kitchen = Column(Float, default=0.0)
     cost_marketing = Column(Float, default=0.0)
-    comment_marketing = Column(String, nullable=True)
+    cost_marketing_comment = Column(String, nullable=True)
     cost_security = Column(Float, default=0.0)
     cost_other = Column(Float, default=0.0)
-    comment_other = Column(String, nullable=True)
+    cost_other_comment = Column(String, nullable=True)
 
     lokal = Column(String, nullable=False, default='Rokoko 2.0')

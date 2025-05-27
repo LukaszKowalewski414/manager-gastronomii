@@ -2,50 +2,68 @@
 
 {% block content %}
 <div class="container my-5">
-    <h2 class="text-center mb-4 text-primary">Podsumowanie dzienne</h2>
+    <h2 class="text-center mb-4 text-primary">Dodaj rozliczenie dzienne</h2>
 
-    <form method="GET" action="{{ url_for('daily_summary') }}" class="mb-4">
-        <label for="data" class="form-label">Wybierz datę:</label>
-        <input type="date" id="data" name="data" class="form-control" required value="{{ selected_date }}">
-        <div class="text-center mt-3">
-            <button type="submit" class="btn btn-info btn-sm">Pokaż</button>
+    <!-- GŁÓWNY FORMULARZ -->
+    <form method="POST" action="{{ url_for('add_daily') }}">
+        <div class="mb-3">
+            <label for="data" class="form-label">Data</label>
+            <input type="date" id="data" name="data" class="form-control" required>
+        </div>
+
+        <h5>Przychody</h5>
+        {% set przychody = {
+            'bar': 'Sprzedaż bar',
+            'kuchnia': 'Sprzedaż kuchnia',
+            'wejsciowki': 'Sprzedaż wejściówki',
+            'inne': 'Sprzedaż inne'
+        } %}
+        {% for field, label in przychody.items() %}
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="sprzedaz_{{ field }}" name="sprzedaz_{{ field }}"
+                {% if field in config['domyslne_przychody'] %}checked{% endif %}>
+            <label class="form-check-label" for="sprzedaz_{{ field }}">{{ label }}</label>
+            <input type="number" step="0.01" min="0" class="form-control mt-2"
+                name="kwota_sprzedaz_{{ field }}" placeholder="Kwota w zł">
+            {% if field == 'inne' %}
+            <input type="text" class="form-control mt-2" name="sprzedaz_inne_komentarz" placeholder="Komentarz do sprzedaży inne">
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <h5 class="mt-4">Koszty</h5>
+        {% set koszty = {
+            'bar': 'Obsługa baru',
+            'kelnerzy': 'Obsługa kelnerska',
+            'kuchnia': 'Obsługa kuchni',
+            'marketing': 'Marketing',
+            'ochrona': 'Ochrona',
+            'inne': 'Inne'
+        } %}
+        {% for field, label in koszty.items() %}
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="koszt_{{ field }}" name="koszt_{{ field }}"
+                {% if field in config['domyslne_koszty'] %}checked{% endif %}>
+            <label class="form-check-label" for="koszt_{{ field }}">{{ label }}</label>
+            <input type="number" step="0.01" min="0" class="form-control mt-2"
+                name="kwota_koszt_{{ field }}" placeholder="Kwota w zł">
+            {% if field == 'marketing' %}
+            <input type="text" class="form-control mt-2" name="koszt_marketing_komentarz" placeholder="Komentarz do marketingu">
+            {% elif field == 'inne' %}
+            <input type="text" class="form-control mt-2" name="koszt_inne_komentarz" placeholder="Komentarz do kosztów innych">
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="text-center mt-4 d-flex flex-column align-items-center gap-2">
+            <button type="submit" name="action" value="save_daily" class="btn btn-success px-4 py-2">
+                💾 Zapisz rozliczenie dnia
+            </button>
+
+            <button type="submit" name="action" value="save_defaults" class="btn btn-outline-secondary px-3 py-2">
+                💡 Zapisz jako domyślne
+            </button>
         </div>
     </form>
-
-    {% if rozliczenie %}
-        <h4 class="mt-4">📅 {{ selected_date }}</h4>
-
-        <h5 class="mt-4">Przychody:</h5>
-        <ul>
-            <li>Sprzedaż bar: {{ rozliczenie.revenue_bar or 0 }} zł</li>
-            <li>Sprzedaż kuchnia: {{ rozliczenie.revenue_kitchen or 0 }} zł</li>
-            <li>Sprzedaż wejściówki: {{ rozliczenie.revenue_entry or 0 }} zł</li>
-            <li>Sprzedaż inne: {{ rozliczenie.revenue_other or 0 }} zł</li>
-        </ul>
-
-        <h5>Koszty:</h5>
-        <ul>
-            <li>Obsługa bar: {{ rozliczenie.cost_bar or 0 }} zł</li>
-            <li>Obsługa kelnerska: {{ rozliczenie.cost_waiters or 0 }} zł</li>
-            <li>Obsługa kuchni: {{ rozliczenie.cost_kitchen or 0 }} zł</li>
-            <li>Marketing: {{ rozliczenie.cost_marketing or 0 }} zł – {{ rozliczenie.cost_marketing_comment }}</li>
-            <li>Ochrona: {{ rozliczenie.cost_security or 0 }} zł</li>
-            <li>Inne: {{ rozliczenie.cost_other or 0 }} zł – {{ rozliczenie.cost_other_comment }}</li>
-        </ul>
-
-        <h5 class="mt-4">💰 Wynik:</h5>
-        <p>
-            <strong>{{ wynik }} zł</strong> (przychody - koszty)
-        </p>
-
-        <div class="text-center mt-4">
-            <a href="{{ url_for('edit_daily', data=selected_date) }}" class="btn-warning-sm">Edytuj rozliczenie</a>
-        </div>
-
-    {% elif selected_date %}
-        <div class="alert alert-warning mt-4">
-            Brak danych dla wybranej daty: <strong>{{ selected_date }}</strong>
-        </div>
-    {% endif %}
 </div>
 {% endblock %}
