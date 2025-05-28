@@ -379,7 +379,6 @@ def summary_period():
 
     return render_template("summary_period.html", summary=None)
 
-
 @app.route('/edit-daily/<data>', methods=['GET', 'POST'])
 def edit_daily(data):
     db_session = Session()
@@ -408,10 +407,38 @@ def edit_daily(data):
         db_session.close()
         return redirect(url_for('daily_summary', data=data))
 
+    # MAPOWANIE NA FORMAT HTML (czyli np. sprzedaz_bar zamiast revenue_bar)
+    roz_dict = {
+        'sprzedaz_bar': roz.revenue_bar,
+        'sprzedaz_kuchnia': roz.revenue_kitchen,
+        'sprzedaz_wejsciowki': roz.revenue_entry,
+        'sprzedaz_inne': roz.revenue_other,
+        'koszt_bar': roz.cost_bar,
+        'koszt_kelnerzy': roz.cost_waiters,
+        'koszt_kuchnia': roz.cost_kitchen,
+        'koszt_ochrona': roz.cost_security,
+        'koszt_marketing': roz.cost_marketing,
+        'koszt_marketing_komentarz': roz.cost_marketing_comment,
+        'koszt_inne': roz.cost_other,
+        'koszt_inne_komentarz': roz.cost_other_comment,
+    }
+
     db_session.close()
-    roz_dict = {col.name: getattr(roz, col.name) for col in roz.__table__.columns}
     return render_template('edit_daily.html', roz=roz_dict, data=data)
 
+@app.route('/delete_daily/<data>', methods=['POST'])
+def delete_daily(data):
+    db_session = Session()
+    lokal = session.get("lokal")  # jeśli rozliczenia są przypisane do lokalu
+    data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
+
+    roz = db_session.query(RozliczenieDzien).filter_by(daily_date=data_obj, lokal=lokal).first()
+    if roz:
+        db_session.delete(roz)
+        db_session.commit()
+
+    db_session.close()
+    return redirect(url_for('daily_summary'))
 
 @app.route('/sync-revenue')
 def sync_revenue():
