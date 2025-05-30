@@ -4,54 +4,74 @@
 <div class="container my-5">
     <h2 class="text-center mb-4 text-primary">Podsumowanie dzienne</h2>
 
-    <form method="GET" action="{{ url_for('daily_summary') }}" class="mb-4">
-        <label for="data" class="form-label">Wybierz datę:</label>
-        <input type="date" id="data" name="data" class="form-control" required value="{{ selected_date }}">
-        <div class="text-center mt-3">
-            <button type="submit" class="btn btn-info btn-sm">Pokaż</button>
-        </div>
-    </form>
+{% set MONTHS = {
+    1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
+    5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
+    9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
+} %}
 
-    {% if rozliczenie %}
-        <h4 class="mt-4">📅 {{ selected_date }}</h4>
+<!-- Formularz wyboru miesiąca i roku -->
+<form method="GET" action="{{ url_for('daily_summary') }}" class="mb-4 text-center">
+    <label for="month">Miesiąc:</label>
+    <select name="month" id="month" class="form-select d-inline w-auto mx-2">
+        {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
+                {{ MONTHS[m] }}
+            </option>
+        {% endfor %}
+    </select>
 
-        <h5 class="mt-4">Przychody:</h5>
-        <ul>
-            <li>Sprzedaż bar: {{ rozliczenie.revenue_bar or 0 }} zł</li>
-            <li>Sprzedaż kuchnia: {{ rozliczenie.revenue_kitchen or 0 }} zł</li>
-            <li>Sprzedaż wejściówki: {{ rozliczenie.revenue_entry or 0 }} zł</li>
-            <li>
-                Sprzedaż inne: {{ rozliczenie.revenue_other or 0 }} zł
-                {% if rozliczenie.revenue_other_comment %}
-                    – <em>{{ rozliczenie.revenue_other_comment }}</em>
-                {% endif %}
-            </li>
+    <label for="year">Rok:</label>
+    <select name="year" id="year" class="form-select d-inline w-auto mx-2">
+        {% for y in range(2023, 2026) %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+    </select>
 
-        </ul>
+    <button type="submit" class="btn btn-info btn-sm">Pokaż</button>
+</form>
 
-        <h5>Koszty:</h5>
-        <ul>
-            <li>Obsługa bar: {{ rozliczenie.cost_bar or 0 }} zł</li>
-            <li>Obsługa kelnerska: {{ rozliczenie.cost_waiters or 0 }} zł</li>
-            <li>Obsługa kuchni: {{ rozliczenie.cost_kitchen or 0 }} zł</li>
-            <li>Marketing: {{ rozliczenie.cost_marketing or 0 }} zł – {{ rozliczenie.cost_marketing_comment }}</li>
-            <li>Ochrona: {{ rozliczenie.cost_security or 0 }} zł</li>
-            <li>Inne: {{ rozliczenie.cost_other or 0 }} zł – {{ rozliczenie.cost_other_comment }}</li>
-        </ul>
+{% if dni_miesiaca %}
+    <h5 class="mb-3 text-center">
+        Status rozliczeń w {{ MONTHS[selected_month] }} {{ selected_year }}:
+    </h5>
 
-        <h5 class="mt-4">💰 Wynik:</h5>
-        <p>
-            <strong>{{ wynik }} zł</strong> (przychody - koszty)
-        </p>
+    <table class="table table-sm table-bordered text-center">
+        <thead class="table-light">
+            <tr>
+                <th>Data</th>
+                <th>Status</th>
+                <th>Akcja</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for d in dni_miesiaca %}
+            <tr>
+                <td>{{ d.data.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    {% if d.status == '✔' %}
+                        <span class="text-success">✅ Rozliczenie dodane</span>
+                    {% else %}
+                        <span class="text-danger">❌ Brak rozliczenia</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if d.status == '✔' %}
+                        <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary">edytuj</a>
+                    {% else %}
+                      <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
+                        class="btn btn-sm border border-primary text-primary"
+                        style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
+                        dodaj
+                      </a>
 
-        <div class="text-center mt-4">
-            <a href="{{ url_for('edit_daily', data=selected_date) }}" class="btn-warning-sm">Edytuj rozliczenie</a>
-        </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
 
-    {% elif selected_date %}
-        <div class="alert alert-warning mt-4">
-            Brak danych dla wybranej daty: <strong>{{ selected_date }}</strong>
-        </div>
-    {% endif %}
 </div>
 {% endblock %}

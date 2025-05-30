@@ -208,45 +208,42 @@ def daily_added():
 
 @app.route('/daily-summary', methods=['GET'])
 def daily_summary():
-    selected_date = request.args.get('data')
-    rozliczenie = None
-    wynik = None
+    db_session = Session()
 
-    if selected_date:
-        db_session = Session()
-        data_obj = datetime.datetime.strptime(selected_date, '%Y-%m-%d').date()
+    # Pobierz wybrany miesiąc i rok z formularza lub ustaw domyślnie na dziś
+    selected_month = int(request.args.get('month', datetime.date.today().month))
+    selected_year = int(request.args.get('year', datetime.date.today().year))
 
-        rozliczenie = db_session.query(RozliczenieDzien).filter_by(
-            daily_date=data_obj,
-            lokal=session['lokal']
-        ).first()
+    # Wylicz liczbę dni w miesiącu
+    first_day = datetime.date(selected_year, selected_month, 1)
+    if selected_month == 12:
+        last_day = datetime.date(selected_year + 1, 1, 1) - datetime.timedelta(days=1)
+    else:
+        last_day = datetime.date(selected_year, selected_month + 1, 1) - datetime.timedelta(days=1)
 
-        if rozliczenie:
-            przychody = sum([
-                rozliczenie.revenue_bar or 0,
-                rozliczenie.revenue_kitchen or 0,
-                rozliczenie.revenue_entry or 0,
-                rozliczenie.revenue_other or 0
-            ])
-            koszty = sum([
-                rozliczenie.cost_bar or 0,
-                rozliczenie.cost_waiters or 0,
-                rozliczenie.cost_kitchen or 0,
-                rozliczenie.cost_marketing or 0,
-                rozliczenie.cost_security or 0,
-                rozliczenie.cost_other or 0
-            ])
-            wynik = round(przychody - koszty, 2)
+    wszystkie_daty = [first_day + datetime.timedelta(days=i) for i in range((last_day - first_day).days + 1)]
 
-        db_session.close()
+    # Pobierz daty, które mają rozliczenie w bazie
+    roz_dni = db_session.query(RozliczenieDzien.daily_date).filter(
+        RozliczenieDzien.daily_date.between(first_day, last_day),
+        RozliczenieDzien.lokal == session['lokal']
+    ).all()
+    roz_dni_set = {r[0] for r in roz_dni}
+
+    # Stwórz listę dni z informacją ✔/✘
+    dni_miesiaca = [{
+        'data': d,
+        'status': '✔' if d in roz_dni_set else '✘'
+    } for d in wszystkie_daty]
+
+    db_session.close()
 
     return render_template(
         'daily_summary.html',
-        selected_date=selected_date,
-        rozliczenie=rozliczenie,
-        wynik=wynik
+        selected_month=selected_month,
+        selected_year=selected_year,
+        dni_miesiaca=dni_miesiaca
     )
-
 
 @app.route('/monthly-summary')
 def monthly_summary():
@@ -261,29 +258,54 @@ def monthly_summary():
 
     db_session = Session()
 
-    revenues = db_session.query(
-        Revenue.revenue_type,
-        func.sum(Revenue.amount)
-    ).filter(
-        Revenue.revenue_date >= start_date,
-        Revenue.revenue_date <= end_date,
-        Revenue.lokal == session['lokal']
-    ).group_by(Revenue.revenue_type).all()
+    # --- PRZYCHODY z rozliczeń dziennych
+    rozliczenia = db_session.query(RozliczenieDzien).filter(
+        RozliczenieDzien.daily_date >= start_date,
+        RozliczenieDzien.daily_date <= end_date,
+        RozliczenieDzien.lokal == session['lokal']
+    ).all()
 
-    total_revenue = sum(amount for _, amount in revenues)
+    total_revenue = sum([
+        (r.revenue_bar or 0) +
+        (r.revenue_kitchen or 0) +
+        (r.revenue_entry or 0) +
+        (r.revenue_other or 0)
+        for r in rozliczenia
+    ])
 
-    costs_by_category = db_session.query(
-        Invoice.category,
-        func.sum(Invoice.gross_amount)
-    ).filter(
+    # --- KOSZTY z rozliczeń dziennych
+    total_costs_dzien = sum([
+        (r.cost_bar or 0) +
+        (r.cost_waiters or 0) +
+        (r.cost_kitchen or 0) +
+        (r.cost_marketing or 0) +
+        (r.cost_security or 0) +
+        (r.cost_other or 0)
+        for r in rozliczenia
+    ])
+
+    # --- KOSZTY z faktur
+    total_costs_faktury = db_session.query(func.sum(Invoice.gross_amount)).filter(
         Invoice.invoice_date >= start_date,
         Invoice.invoice_date <= end_date,
         Invoice.lokal == session['lokal']
-    ).group_by(Invoice.category).all()
+    ).scalar() or 0
 
-    total_costs = sum(amount for _, amount in costs_by_category)
-    cost_by_category = {cat: float(amount) for cat, amount in costs_by_category}
+    # --- SUMA całkowita kosztów
+    total_costs = total_costs_dzien + total_costs_faktury
 
+    # --- Koszty według kategorii (na razie tylko z rozliczeń dziennych)
+    cost_by_category = {
+        'obsługa baru': sum(r.cost_bar or 0 for r in rozliczenia),
+        'obsługa kelnerska': sum(r.cost_waiters or 0 for r in rozliczenia),
+        'obsługa kuchni': sum(r.cost_kitchen or 0 for r in rozliczenia),
+        'marketing': sum(r.cost_marketing or 0 for r in rozliczenia),
+        'ochrona': sum(r.cost_security or 0 for r in rozliczenia),
+        'inne': sum(r.cost_other or 0 for r in rozliczenia),
+        'faktury': total_costs_faktury
+    }
+
+    # --- Faktury (do tabeli)
     invoices = db_session.query(Invoice).filter(
         Invoice.invoice_date >= start_date,
         Invoice.invoice_date <= end_date,
@@ -293,9 +315,7 @@ def monthly_summary():
     db_session.close()
 
     summary = {
-        'revenues': revenues,
         'total_revenue': total_revenue,
-        'costs': costs_by_category,
         'total_costs': total_costs,
         'net_result': total_revenue - total_costs,
         'cost_by_category': cost_by_category
@@ -325,13 +345,18 @@ def summary_period():
             date_range = [start, end]
 
     elif mode == "monthly":
-        month_str = request.args.get("month")
-        if month_str:
-            start = datetime.datetime.strptime(month_str, "%Y-%m").date()
-            next_month = (start.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
-            end = next_month - datetime.timedelta(days=1)
-            label = f"{start.strftime('%B %Y')}"
-            date_range = [start, end]
+        year = request.args.get("year")
+        month = request.args.get("month")
+        if year and month:
+            try:
+                start = datetime.datetime.strptime(f"{year}-{month}", "%Y-%m").date()
+                next_month = (start.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
+                end = next_month - datetime.timedelta(days=1)
+                label = f"{start.strftime('%B')} {year}"
+                date_range = [start, end]
+            except ValueError:
+                label = "Niepoprawna data"
+
 
     elif mode == "custom":
         start_str = request.args.get("start_date")
@@ -368,16 +393,21 @@ def summary_period():
         total_expenses = sum(expense_breakdown.values())
         result = total_income - total_expenses
 
-        return render_template("summary_period.html", summary={
-            "range": label,
-            "total_income": round(total_income, 2),
-            "total_expenses": round(total_expenses, 2),
-            "result": round(result, 2),
-            "income_breakdown": income_breakdown,
-            "expense_breakdown": expense_breakdown
-        })
+        return render_template(
+            "summary_period.html",
+            summary={
+                "range": label,
+                "total_income": round(total_income, 2),
+                "total_expenses": round(total_expenses, 2),
+                "result": round(result, 2),
+                "income_breakdown": income_breakdown,
+                "expense_breakdown": expense_breakdown
+            },
+            now=datetime.datetime.now()
+        )
 
-    return render_template("summary_period.html", summary=None)
+    return render_template("summary_period.html", summary=None, now=datetime.datetime.now())
+
 
 @app.route('/edit-daily/<data>', methods=['GET', 'POST'])
 def edit_daily(data):

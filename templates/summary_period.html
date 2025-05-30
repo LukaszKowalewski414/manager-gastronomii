@@ -5,7 +5,6 @@
   <h2 class="text-center text-primary mb-4">📆 Podsumowanie Okresowe</h2>
 
   <form method="GET" action="{{ url_for('summary_period') }}" class="mb-4">
-
     <div class="mb-3">
       <label for="mode" class="form-label">Zakres:</label>
       <select id="mode" name="mode" class="form-select" onchange="toggleDateInputs()">
@@ -16,21 +15,39 @@
     </div>
 
     <!-- Weekly -->
-    <div class="mb-3 date-input" id="weekly-input">
+    <div class="mb-3 date-input {% if request.args.get('mode') != 'weekly' %}d-none{% endif %}" id="weekly-input">
       <label for="week_start" class="form-label">Początek tygodnia:</label>
       <input type="date" name="week_start" class="form-control"
              value="{{ request.args.get('week_start', '') }}">
     </div>
 
-    <!-- Monthly -->
-    <div class="mb-3 date-input d-none" id="monthly-input">
-      <label for="month" class="form-label">Miesiąc:</label>
-      <input type="month" name="month" class="form-control"
-             value="{{ request.args.get('month', '') }}">
-    </div>
+<!-- Monthly -->
+<div class="mb-3 date-input {% if request.args.get('mode') != 'monthly' %}d-none{% endif %}" id="monthly-input">
+  <label class="form-label">Miesiąc i rok:</label>
+  <div class="d-flex gap-2">
+    <select name="month" class="form-select">
+      {% set selected_month = request.args.get('month', now.strftime('%m')) %}
+      {% set months = [
+        ('01', 'Styczeń'), ('02', 'Luty'), ('03', 'Marzec'), ('04', 'Kwiecień'),
+        ('05', 'Maj'), ('06', 'Czerwiec'), ('07', 'Lipiec'), ('08', 'Sierpień'),
+        ('09', 'Wrzesień'), ('10', 'Październik'), ('11', 'Listopad'), ('12', 'Grudzień')
+      ] %}
+      {% for num, name in months %}
+        <option value="{{ num }}" {% if selected_month == num %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="year" class="form-select">
+      {% set selected_year = request.args.get('year', now.strftime('%Y')) %}
+      {% for y in range(2025, 2031) %}
+        <option value="{{ y }}" {% if selected_year == y|string %}selected{% endif %}>{{ y }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
 
     <!-- Custom range -->
-    <div class="mb-3 date-input d-none" id="custom-input">
+    <div class="mb-3 date-input {% if request.args.get('mode') != 'custom' %}d-none{% endif %}" id="custom-input">
       <label class="form-label">Zakres dat:</label>
       <input type="date" name="start_date" class="form-control mb-2"
              value="{{ request.args.get('start_date', '') }}">
@@ -42,35 +59,35 @@
   </form>
 
   {% if summary %}
-  <h4 class="text-center mt-5">📊 Wyniki dla zakresu: {{ summary.range }}</h4>
+    <h4 class="text-center mt-5">📊 Wyniki dla zakresu: {{ summary.range }}</h4>
 
-  <div class="mt-4">
-    <p><strong>💰 Przychody łącznie:</strong> {{ summary.total_income }} zł</p>
-    <p><strong>💸 Koszty łącznie:</strong> {{ summary.total_expenses }} zł</p>
-    <p><strong>🧾 Wynik netto:</strong> {{ summary.result }} zł</p>
-  </div>
+    <div class="mt-4">
+      <p><strong>💰 Przychody łącznie:</strong> {{ summary.total_income }} zł</p>
+      <p><strong>💸 Koszty łącznie:</strong> {{ summary.total_expenses }} zł</p>
+      <p><strong>🧾 Wynik netto:</strong> {{ summary.result }} zł</p>
+    </div>
 
-  <hr class="my-4">
+    <hr class="my-4">
 
-  <h5 class="text-center">📈 Przychody według kategorii:</h5>
-  <ul class="list-group mb-4">
-    {% for name, value in summary.income_breakdown.items() %}
-      <li class="list-group-item d-flex justify-content-between">
-        <span>{{ name }}</span>
-        <span>{{ value|round(2) }} zł</span>
-      </li>
-    {% endfor %}
-  </ul>
+    <h5 class="text-center">📈 Przychody według kategorii:</h5>
+    <ul class="list-group mb-4">
+      {% for name, value in summary.income_breakdown.items() %}
+        <li class="list-group-item d-flex justify-content-between">
+          <span>{{ name }}</span>
+          <span>{{ value|round(2) }} zł</span>
+        </li>
+      {% endfor %}
+    </ul>
 
-  <h5 class="text-center">📉 Koszty według kategorii:</h5>
-  <ul class="list-group mb-4">
-    {% for name, value in summary.expense_breakdown.items() %}
-      <li class="list-group-item d-flex justify-content-between">
-        <span>{{ name }}</span>
-        <span>{{ value|round(2) }} zł</span>
-      </li>
-    {% endfor %}
-  </ul>
+    <h5 class="text-center">📉 Koszty według kategorii:</h5>
+    <ul class="list-group mb-4">
+      {% for name, value in summary.expense_breakdown.items() %}
+        <li class="list-group-item d-flex justify-content-between">
+          <span>{{ name }}</span>
+          <span>{{ value|round(2) }} zł</span>
+        </li>
+      {% endfor %}
+    </ul>
   {% endif %}
 </div>
 
