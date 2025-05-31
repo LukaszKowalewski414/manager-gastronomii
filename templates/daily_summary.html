@@ -4,74 +4,75 @@
 <div class="container my-5">
     <h2 class="text-center mb-4 text-primary">Podsumowanie dzienne</h2>
 
-{% set MONTHS = {
-    1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
-    5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
-    9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
-} %}
+    {% set MONTHS = {
+        1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
+        5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
+        9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
+    } %}
 
-<!-- Formularz wyboru miesiąca i roku -->
-<form method="GET" action="{{ url_for('daily_summary') }}" class="mb-4 text-center">
-    <label for="month">Miesiąc:</label>
-    <select name="month" id="month" class="form-select d-inline w-auto mx-2">
-        {% for m in range(1, 13) %}
-            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
-                {{ MONTHS[m] }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <label for="year">Rok:</label>
-    <select name="year" id="year" class="form-select d-inline w-auto mx-2">
-        {% for y in range(2023, 2026) %}
-            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
-        {% endfor %}
-    </select>
-
-    <button type="submit" class="btn btn-info btn-sm">Pokaż</button>
-</form>
-
-{% if dni_miesiaca %}
-    <h5 class="mb-3 text-center">
-        Status rozliczeń w {{ MONTHS[selected_month] }} {{ selected_year }}:
-    </h5>
-
-    <table class="table table-sm table-bordered text-center">
-        <thead class="table-light">
-            <tr>
-                <th>Data</th>
-                <th>Status</th>
-                <th>Akcja</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for d in dni_miesiaca %}
-            <tr>
-                <td>{{ d.data.strftime('%Y-%m-%d') }}</td>
-                <td>
-                    {% if d.status == '✔' %}
-                        <span class="text-success">✅ Rozliczenie dodane</span>
-                    {% else %}
-                        <span class="text-danger">❌ Brak rozliczenia</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if d.status == '✔' %}
-                        <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary">edytuj</a>
-                    {% else %}
-                      <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
-                        class="btn btn-sm border border-primary text-primary"
-                        style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
-                        dodaj
-                      </a>
-
-                    {% endif %}
-                </td>
-            </tr>
+    <!-- Formularz wyboru miesiąca i roku -->
+    <form method="GET" action="{{ url_for('daily_summary') }}" class="mb-4 text-center">
+        <label for="month">Miesiąc:</label>
+        <select name="month" id="month" class="form-select d-inline w-auto mx-2">
+            {% for m in range(1, 13) %}
+                <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>
+                    {{ MONTHS[m] }}
+                </option>
             {% endfor %}
-        </tbody>
-    </table>
-{% endif %}
+        </select>
 
+        <label for="year">Rok:</label>
+        <select name="year" id="year" class="form-select d-inline w-auto mx-2">
+            {% for y in range(2023, 2026) %}
+                <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="btn btn-info btn-sm">Pokaż</button>
+    </form>
+
+    {% if dni_miesiaca %}
+        <h5 class="mb-3 text-center">
+            Status rozliczeń w {{ MONTHS[selected_month] }} {{ selected_year }}:
+        </h5>
+
+        <table class="table table-sm table-bordered text-center">
+            <thead class="table-light">
+                <tr>
+                    <th>Data</th>
+                    <th>Status</th>
+                    <th>Akcja</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in dni_miesiaca %}
+                <tr>
+                    <td>{{ d.data.strftime('%Y-%m-%d') }}</td>
+
+                    <td>
+                        {% if d.status == '✔' %}
+                            <span class="text-success">✅ Rozliczenie dodane</span>
+                        {% else %}
+                            <span class="text-danger">❌ Brak rozliczenia</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if d.status == '✔' %}
+                            <a href="{{ url_for('view_daily', id=d.id) }}" class="btn btn-sm btn-outline-info me-1">podgląd</a>
+                            <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary">edytuj</a>
+                        {% else %}
+                            <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
+                               class="btn btn-sm border border-primary text-primary"
+                               style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
+                               dodaj
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 </div>
 {% endblock %}

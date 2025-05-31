@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5 text-center">
+  <h2 class="text-primary mb-3"> Rozliczenie dzienne</h2>
+  <p><strong>Data:</strong> {{ roz.daily_date.strftime('%Y-%m-%d') }}</p>
+</div>
+
+<div class="container my-4">
+
+  {% set suma_przychodow = roz.revenue_bar + roz.revenue_kitchen + roz.revenue_entry + roz.revenue_other %}
+  {% set suma_kosztow = roz.cost_bar + roz.cost_waiters + roz.cost_kitchen + roz.cost_marketing + roz.cost_security + roz.cost_other %}
+
+  <h5 class="mt-4">Przychody łącznie: {{ suma_przychodow }} zł</h5>
+  <ul>
+    <li>Bar: {{ roz.revenue_bar }} zł</li>
+    <li>Kuchnia: {{ roz.revenue_kitchen }} zł</li>
+    <li>Wejściówki: {{ roz.revenue_entry }} zł</li>
+    <li>Inne: {{ roz.revenue_other }} zł – <em>{{ roz.revenue_other_comment or '' }}</em></li>
+  </ul>
+
+  <h5 class="mt-4">Koszty łącznie: {{ suma_kosztow }} zł</h5>
+  <ul>
+    <li>Obsługa bar: {{ roz.cost_bar }} zł</li>
+    <li>Obsługa kelnerska: {{ roz.cost_waiters }} zł</li>
+    <li>Obsługa kuchni: {{ roz.cost_kitchen }} zł</li>
+    <li>Marketing: {{ roz.cost_marketing }} zł – <em>{{ roz.cost_marketing_comment or '' }}</em></li>
+    <li>Ochrona: {{ roz.cost_security }} zł</li>
+    <li>Inne: {{ roz.cost_other }} zł – <em>{{ roz.cost_other_comment or '' }}</em></li>
+  </ul>
+</div>
+{% endblock %}

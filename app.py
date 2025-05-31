@@ -31,7 +31,6 @@ def add_invoice():
 
         db_session = Session()
         invoice = Invoice(
-            filename=form_data.get('filename', 'manual-entry'),
             invoice_date=invoice_date,
             gross_amount=float(form_data['gross_amount']),
             net_amount=float(form_data.get('net_amount', 0)),
@@ -210,11 +209,9 @@ def daily_added():
 def daily_summary():
     db_session = Session()
 
-    # Pobierz wybrany miesiąc i rok z formularza lub ustaw domyślnie na dziś
     selected_month = int(request.args.get('month', datetime.date.today().month))
     selected_year = int(request.args.get('year', datetime.date.today().year))
 
-    # Wylicz liczbę dni w miesiącu
     first_day = datetime.date(selected_year, selected_month, 1)
     if selected_month == 12:
         last_day = datetime.date(selected_year + 1, 1, 1) - datetime.timedelta(days=1)
@@ -223,18 +220,20 @@ def daily_summary():
 
     wszystkie_daty = [first_day + datetime.timedelta(days=i) for i in range((last_day - first_day).days + 1)]
 
-    # Pobierz daty, które mają rozliczenie w bazie
-    roz_dni = db_session.query(RozliczenieDzien.daily_date).filter(
-        RozliczenieDzien.daily_date.between(first_day, last_day),
-        RozliczenieDzien.lokal == session['lokal']
-    ).all()
-    roz_dni_set = {r[0] for r in roz_dni}
-
-    # Stwórz listę dni z informacją ✔/✘
-    dni_miesiaca = [{
-        'data': d,
-        'status': '✔' if d in roz_dni_set else '✘'
-    } for d in wszystkie_daty]
+    dni_miesiaca = []
+    for d in wszystkie_daty:
+        roz = db_session.query(RozliczenieDzien).filter_by(daily_date=d, lokal=session['lokal']).first()
+        if roz:
+            dni_miesiaca.append({
+                'data': d,
+                'status': '✔',
+                'id': roz.id  # ← dodajemy ID
+            })
+        else:
+            dni_miesiaca.append({
+                'data': d,
+                'status': '✘'
+            })
 
     db_session.close()
 
@@ -244,6 +243,7 @@ def daily_summary():
         selected_year=selected_year,
         dni_miesiaca=dni_miesiaca
     )
+
 
 @app.route('/monthly-summary')
 def monthly_summary():
@@ -336,6 +336,12 @@ def summary_period():
     date_range = []
     label = ""
 
+    MONTHS_PL = {
+        1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
+        5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
+        9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
+    }
+
     if mode == "weekly":
         start_date = request.args.get("week_start")
         if start_date:
@@ -349,14 +355,15 @@ def summary_period():
         month = request.args.get("month")
         if year and month:
             try:
-                start = datetime.datetime.strptime(f"{year}-{month}", "%Y-%m").date()
+                month = int(month)
+                year = int(year)
+                start = datetime.date(year, month, 1)
                 next_month = (start.replace(day=28) + datetime.timedelta(days=4)).replace(day=1)
                 end = next_month - datetime.timedelta(days=1)
-                label = f"{start.strftime('%B')} {year}"
+                label = f"{MONTHS_PL[month]} {year}"
                 date_range = [start, end]
             except ValueError:
                 label = "Niepoprawna data"
-
 
     elif mode == "custom":
         start_str = request.args.get("start_date")
@@ -538,6 +545,15 @@ def save_defaults():
     print(new_config)
 
     return redirect(url_for('add_daily'))
+
+@app.route('/view_daily/<int:id>')
+def view_daily(id):
+    db_session = Session()
+    roz = db_session.query(RozliczenieDzien).filter_by(id=id).first()
+    if not roz:
+        return "Nie znaleziono rozliczenia", 404
+    return render_template('view_daily.html', roz=roz)
+
 
 
 if __name__ == '__main__':
