@@ -1,32 +1,67 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container my-5 text-center">
-  <h2 class="text-primary mb-3"> Rozliczenie dzienne</h2>
-  <p><strong>Data:</strong> {{ roz.daily_date.strftime('%Y-%m-%d') }}</p>
-</div>
+<div class="container my-5">
+  <h2 class="text-center text-primary mb-3">📆 Rozliczenie dzienne</h2>
+  <p class="text-center"><strong>Data:</strong> {{ roz.daily_date.strftime('%Y-%m-%d') }}</p>
 
-<div class="container my-4">
+  <div class="row mt-4">
+    <!-- Lewa kolumna: wszystkie dane -->
+    <div class="col-md-8">
+      <h5>💰 Przychody łącznie: {{ przychody }} zł</h5>
+      <ul>
+        <li>Bar: {{ roz.revenue_bar }} zł</li>
+        <li>Kuchnia: {{ roz.revenue_kitchen }} zł</li>
+        <li>Wejściówki: {{ roz.revenue_entry }} zł</li>
+        <li>Inne: {{ roz.revenue_other }} zł – <em>{{ roz.revenue_other_comment or '' }}</em></li>
+      </ul>
 
-  {% set suma_przychodow = roz.revenue_bar + roz.revenue_kitchen + roz.revenue_entry + roz.revenue_other %}
-  {% set suma_kosztow = roz.cost_bar + roz.cost_waiters + roz.cost_kitchen + roz.cost_marketing + roz.cost_security + roz.cost_other %}
+      <h5 class="mt-4">💸 Koszty łącznie: {{ koszty }} zł</h5>
+      <ul>
+        <li>Obsługa bar: {{ roz.cost_bar }} zł</li>
+        <li>Obsługa kelnerska: {{ roz.cost_waiters }} zł</li>
+        <li>Obsługa kuchni: {{ roz.cost_kitchen }} zł</li>
+        <li>Marketing: {{ roz.cost_marketing }} zł – <em>{{ roz.cost_marketing_comment or '' }}</em></li>
+        <li>Ochrona: {{ roz.cost_security }} zł</li>
+        <li>Inne: {{ roz.cost_other }} zł – <em>{{ roz.cost_other_comment or '' }}</em></li>
+      </ul>
 
-  <h5 class="mt-4">Przychody łącznie: {{ suma_przychodow }} zł</h5>
-  <ul>
-    <li>Bar: {{ roz.revenue_bar }} zł</li>
-    <li>Kuchnia: {{ roz.revenue_kitchen }} zł</li>
-    <li>Wejściówki: {{ roz.revenue_entry }} zł</li>
-    <li>Inne: {{ roz.revenue_other }} zł – <em>{{ roz.revenue_other_comment or '' }}</em></li>
-  </ul>
+      <h5 class="mt-4">📈 Wynik dzienny: <strong>{{ wynik }} zł</strong></h5>
 
-  <h5 class="mt-4">Koszty łącznie: {{ suma_kosztow }} zł</h5>
-  <ul>
-    <li>Obsługa bar: {{ roz.cost_bar }} zł</li>
-    <li>Obsługa kelnerska: {{ roz.cost_waiters }} zł</li>
-    <li>Obsługa kuchni: {{ roz.cost_kitchen }} zł</li>
-    <li>Marketing: {{ roz.cost_marketing }} zł – <em>{{ roz.cost_marketing_comment or '' }}</em></li>
-    <li>Ochrona: {{ roz.cost_security }} zł</li>
-    <li>Inne: {{ roz.cost_other }} zł – <em>{{ roz.cost_other_comment or '' }}</em></li>
-  </ul>
+      <hr class="my-4">
+
+      <h5>📊 Łączny koszt pracowników</h5>
+      <p>{{ wskaznik_pracownicy.value }}% {{ wskaznik_pracownicy.color }}</p>
+
+      {% if breakdown_sorted %}
+        <p>w tym:</p>
+        <ul>
+          {% for item in breakdown_sorted %}
+            <li>{{ item.nazwa }}: {{ item.procent }}%</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      <h5 class="mt-4">👥 Liczba pracowników</h5>
+      <ul>
+        <li>Bar: {{ liczba_pracownikow.bar }}</li>
+        <li>Kuchnia: {{ liczba_pracownikow.kuchnia }}</li>
+        <li>Kelnerzy: {{ liczba_pracownikow.kelnerzy }}</li>
+        <li>Ochrona: {{ liczba_pracownikow.ochrona }}</li>
+      </ul>
+    </div>
+
+    <!-- Prawa kolumna: Notatka -->
+    {% if roz.notatka %}
+    <div class="col-md-4">
+      <div class="card shadow-sm" style="background-color: #fffde7; border-left: 5px solid #ffca28;">
+        <div class="card-body">
+          <h5 class="card-title">📝 Notatka</h5>
+          <p class="card-text" style="white-space: pre-line;">{{ roz.notatka }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

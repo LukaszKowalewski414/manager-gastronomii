@@ -58,6 +58,34 @@
             </select>
         </div>
 
+        <div class="mb-4" id="goods_type_wrapper" style="display: none;">
+    <label for="goods_type" class="form-label">Rodzaj towaru</label>
+    <select id="goods_type" name="goods_type" class="form-select">
+        <option value="">Wybierz rodzaj...</option>
+        <option value="jedzenie" {% if invoice.goods_type == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
+        <option value="bar" {% if invoice.goods_type == 'bar' %}selected{% endif %}>Bar</option>
+    </select>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const category = document.getElementById("category");
+        const goodsTypeWrapper = document.getElementById("goods_type_wrapper");
+
+        function toggleGoodsType() {
+            if (category.value === "Towar") {
+                goodsTypeWrapper.style.display = "block";
+            } else {
+                goodsTypeWrapper.style.display = "none";
+            }
+        }
+
+        category.addEventListener("change", toggleGoodsType);
+        toggleGoodsType();  // Run on page load
+    });
+</script>
+
+
         <!-- Przyciski -->
         <div class="text-center">
             <button type="submit" class="btn btn-success btn-lg px-5">Zapisz zmiany</button>

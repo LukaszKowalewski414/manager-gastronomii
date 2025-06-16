@@ -1,14 +1,9 @@
 {
     "domyslne_przychody": [
-        "bar",
-        "wejsciowki",
-        "inne"
+        "bar"
     ],
     "domyslne_koszty": [
         "bar",
-        "kelnerzy",
-        "ochrona",
-        "marketing",
-        "inne"
+        "kelnerzy"
     ]
 }

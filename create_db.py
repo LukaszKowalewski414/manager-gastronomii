@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from models import Base
 
 # Ścieżka do pliku bazy
-DB_PATH = "data/food_cost.db"
+DB_PATH = os.path.join(os.path.dirname(__file__), "data", "food_cost.db")
 
 # 1. Usuń starą bazę, jeśli istnieje
 if os.path.exists(DB_PATH):

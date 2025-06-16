@@ -38,28 +38,58 @@
     </form>
 
     <!-- Karty z liczbami -->
-    <div class="row text-center mb-5">
-        <div class="col-md-4">
-            <div class="card p-3 shadow">
-                <h5>💰 Suma utargów</h5>
-                <h3>{{ summary.total_revenue | round(2) }} zł</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3 shadow">
-                <h5>📉 Suma kosztów</h5>
-                <h3>{{ summary.total_costs | round(2) }} zł</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3 shadow">
-                <h5>📊 Wynik</h5>
-                <h3 class="{{ 'text-success' if summary.net_result >= 0 else 'text-danger' }}">
-                    {{ summary.net_result | round(2) }} zł
-                </h3>
-            </div>
+    <!-- Górny rząd: pełna szerokość -->
+<div class="row text-center mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 shadow">
+            <h5>💰 Suma utargów</h5>
+            <h3>{{ summary.total_revenue | round(2) }} zł</h3>
         </div>
     </div>
+    <div class="col-md-4">
+        <div class="card p-3 shadow">
+            <h5>📉 Suma kosztów</h5>
+            <h3>{{ summary.total_costs | round(2) }} zł</h3>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 shadow">
+            <h5>📊 Wynik</h5>
+            <h3 class="{{ 'text-success' if summary.net_result >= 0 else 'text-danger' }}">
+                {{ summary.net_result | round(2) }} zł
+            </h3>
+        </div>
+    </div>
+</div>
+
+<!-- Dolny rząd: mniejsze karty -->
+<div class="row text-center mb-5">
+    <div class="col-md-3 offset-md-3">
+        <div class="card p-3 shadow small">
+            <h6>🍸 Foodcost – bar</h6>
+            <p class="fs-5 mb-0">{{ summary.foodcost_bar['value'] }}%
+                <span class="{% if summary.foodcost_bar['value'] < 30 %}text-success
+                              {% elif summary.foodcost_bar['value'] <= 40 %}text-warning
+                              {% else %}text-danger{% endif %}">
+                    {{ summary.foodcost_bar['color'] }}
+                </span>
+            </p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow small">
+            <h6>👨‍🍳 Foodcost – kuchnia</h6>
+            <p class="fs-5 mb-0">{{ summary.foodcost_kitchen['value'] }}%
+                <span class="{% if summary.foodcost_kitchen['value'] < 30 %}text-success
+                              {% elif summary.foodcost_kitchen['value'] <= 40 %}text-warning
+                              {% else %}text-danger{% endif %}">
+                    {{ summary.foodcost_kitchen['color'] }}
+                </span>
+            </p>
+        </div>
+    </div>
+</div>
+
 
     <!-- Wykresy -->
     <div class="row mb-5">
@@ -70,6 +100,15 @@
             <canvas id="pieChart"></canvas>
         </div>
     </div>
+
+<div class="col-md-3">
+    <div class="card p-3 shadow">
+        <h5>🍽️ Foodcost (Stosunek zakupów towaru do przychodu)</h5>
+        <h3>{{ summary.foodcost['value'] }}% {{ summary.foodcost['color'] }}</h3>
+    </div>
+</div>
+
+
 
     <!-- Tabela kosztów -->
     <h4 class="mb-3">Koszty według kategorii</h4>

@@ -11,6 +11,16 @@
             <input type="date" id="data" name="data" class="form-control" required>
         </div>
 
+        <!-- 🔹 Notatka – rozwijane pole -->
+        <div class="mb-3">
+            <button type="button" class="btn btn-outline-info mb-2" onclick="toggleNotatka()">
+                📝 Dodaj notatkę
+            </button>
+            <div id="notatkaBox" style="display: none;">
+                <textarea class="form-control" name="notatka" rows="4" placeholder="Tutaj możesz wpisać dodatkowe notatki dotyczące tego dnia..."></textarea>
+            </div>
+        </div>
+
         <h5>Przychody</h5>
         {% set przychody = {
             'bar': 'Sprzedaż bar',
@@ -47,7 +57,16 @@
             <label class="form-check-label" for="koszt_{{ field }}">{{ label }}</label>
             <input type="number" step="0.01" min="0" class="form-control mt-2"
                 name="kwota_koszt_{{ field }}" placeholder="Kwota w zł">
-            {% if field == 'marketing' %}
+
+            {% if field == 'bar' %}
+            <input type="number" class="form-control mt-2" name="staff_bar" min="0" placeholder="Liczba pracowników – bar">
+            {% elif field == 'kelnerzy' %}
+            <input type="number" class="form-control mt-2" name="staff_waiters" min="0" placeholder="Liczba pracowników – kelnerzy">
+            {% elif field == 'kuchnia' %}
+            <input type="number" class="form-control mt-2" name="staff_kitchen" min="0" placeholder="Liczba pracowników – kuchnia">
+            {% elif field == 'ochrona' %}
+            <input type="number" class="form-control mt-2" name="staff_security" min="0" placeholder="Liczba pracowników – ochrona">
+            {% elif field == 'marketing' %}
             <input type="text" class="form-control mt-2" name="koszt_marketing_komentarz" placeholder="Komentarz do marketingu">
             {% elif field == 'inne' %}
             <input type="text" class="form-control mt-2" name="koszt_inne_komentarz" placeholder="Komentarz do kosztów innych">
@@ -66,4 +85,12 @@
         </div>
     </form>
 </div>
+
+<!-- 🔸 JavaScript do rozwijania notatki -->
+<script>
+    function toggleNotatka() {
+        const box = document.getElementById('notatkaBox');
+        box.style.display = (box.style.display === 'none') ? 'block' : 'none';
+    }
+</script>
 {% endblock %}

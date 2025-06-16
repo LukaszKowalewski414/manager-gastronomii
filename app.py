@@ -37,6 +37,7 @@ def add_invoice():
             nip=form_data.get('supplier_nip', ''),
             supplier=form_data.get('supplier', ''),
             category=form_data['category'],
+            goods_type=form_data.get("goods_type"),
             lokal=session['lokal']
         )
         db_session.add(invoice)
@@ -62,6 +63,7 @@ def edit_invoice(invoice_id):
         invoice.supplier = request.form['supplier_name']
         invoice.nip = request.form['supplier_nip']
         invoice.category = request.form['category']
+        invoice.goods_type = form_data.get("goods_type")
         invoice.net_amount = float(request.form.get('net_amount', 0))
         db_session.commit()
         db_session.close()
@@ -116,6 +118,11 @@ def invoice_saved(invoice_id):
         return render_template('invoice_saved.html', invoice=invoice)
     else:
         return ("Nie znaleziono faktury", 404)
+
+
+
+    # 🔹 Jeśli GET – pokaż formularz
+    return render_template('add_daily.html', config=config)
 
 @app.route('/add_daily', methods=['GET', 'POST'])
 def add_daily():
@@ -174,6 +181,13 @@ def add_daily():
                 except ValueError:
                     return 0.0
 
+            def get_int(field):
+                val = request.form.get(field)
+                try:
+                    return int(val) if val else None
+                except ValueError:
+                    return None
+
             # Przychody
             roz.revenue_bar = get_kwota('sprzedaz_bar')
             roz.revenue_kitchen = get_kwota('sprzedaz_kuchnia')
@@ -191,13 +205,21 @@ def add_daily():
             roz.cost_other = get_kwota('koszt_inne')
             roz.cost_other_comment = request.form.get('koszt_inne_komentarz')
 
+            # Liczba pracowników
+            roz.staff_bar = get_int("staff_bar")
+            roz.staff_waiters = get_int("staff_waiters")
+            roz.staff_kitchen = get_int("staff_kitchen")
+            roz.staff_security = get_int("staff_security")
+
+            # 📝 Notatka
+            roz.notatka = request.form.get("notatka", "").strip()
+
             db_session.add(roz)
             db_session.commit()
             db_session.close()
 
             return redirect(url_for('daily_summary', data=data_str))
 
-    # 🔹 Jeśli GET – pokaż formularz
     return render_template('add_daily.html', config=config)
 
 
@@ -321,6 +343,46 @@ def monthly_summary():
         'cost_by_category': cost_by_category
     }
 
+    foodcost_goods_kitchen = sum(f.net_amount or 0 for f in invoices if f.category == 'Towar' and f.goods_type == 'jedzenie')
+    foodcost_goods_bar = sum(f.net_amount or 0 for f in invoices if f.category == 'Towar' and f.goods_type == 'bar')
+
+    revenue_kitchen = sum(d.revenue_kitchen or 0 for d in rozliczenia)
+    revenue_bar = sum(d.revenue_bar or 0 for d in rozliczenia)
+
+    if revenue_bar:
+        foodcost_value = round((foodcost_goods_kitchen + foodcost_goods_bar) / revenue_bar * 100, 1)
+        if foodcost_value < 30:
+            foodcost_color = "🟢"
+        elif foodcost_value <= 35:
+            foodcost_color = "🟡"
+        else:
+            foodcost_color = "🔴"
+    else:
+        foodcost_value = 0
+        foodcost_color = "⚠️"
+
+    def calc_foodcost(value, revenue):
+        if revenue:
+            percent = round(value / revenue * 100, 1)
+            if percent < 30:
+                color = "🟢"
+            elif percent <= 40:
+                color = "🟡"
+            else:
+                color = "🔴"
+        else:
+            percent = 0
+            color = "⚠️"
+        return {'value': percent, 'color': color}
+
+    summary["foodcost_bar"] = calc_foodcost(foodcost_goods_bar, revenue_bar)
+    summary["foodcost_kitchen"] = calc_foodcost(foodcost_goods_kitchen, revenue_kitchen)
+
+    summary["foodcost"] = {
+        "value": foodcost_value,
+        "color": foodcost_color
+    }
+
     return render_template(
         'monthly_summary.html',
         summary=summary,
@@ -426,11 +488,19 @@ def edit_daily(data):
         def get_kwota(field):
             return float(request.form.get(f"{field}_kwota", 0)) if request.form.get(field) else 0
 
+        def get_int(value):
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return None
+
+        # Przychody
         roz.revenue_bar = get_kwota('sprzedaz_bar')
         roz.revenue_kitchen = get_kwota('sprzedaz_kuchnia')
         roz.revenue_entry = get_kwota('sprzedaz_wejsciowki')
         roz.revenue_other = get_kwota('sprzedaz_inne')
 
+        # Koszty
         roz.cost_bar = get_kwota('koszt_bar')
         roz.cost_waiters = get_kwota('koszt_kelnerzy')
         roz.cost_kitchen = get_kwota('koszt_kuchnia')
@@ -439,6 +509,13 @@ def edit_daily(data):
         roz.cost_marketing_comment = request.form.get('koszt_marketing_komentarz', '')
         roz.cost_other = get_kwota('koszt_inne')
         roz.cost_other_comment = request.form.get('koszt_inne_komentarz', '')
+
+        # Liczba pracowników
+        roz.staff_bar = get_int(request.form.get("staff_bar"))
+        roz.staff_kitchen = get_int(request.form.get("staff_kitchen"))
+        roz.staff_waiters = get_int(request.form.get("staff_waiters"))
+        roz.staff_security = get_int(request.form.get("staff_security"))
+        roz.notatka = request.form.get("notatka", "").strip()
 
         db_session.commit()
         db_session.close()
@@ -458,6 +535,13 @@ def edit_daily(data):
         'koszt_marketing_komentarz': roz.cost_marketing_comment,
         'koszt_inne': roz.cost_other,
         'koszt_inne_komentarz': roz.cost_other_comment,
+
+        # Nowe dane – liczby pracowników
+        'staff_bar': roz.staff_bar,
+        'staff_kitchen': roz.staff_kitchen,
+        'staff_waiters': roz.staff_waiters,
+        'staff_security': roz.staff_security,
+        'notatka': roz.notatka
     }
 
     db_session.close()
@@ -552,9 +636,108 @@ def view_daily(id):
     roz = db_session.query(RozliczenieDzien).filter_by(id=id).first()
     if not roz:
         return "Nie znaleziono rozliczenia", 404
-    return render_template('view_daily.html', roz=roz)
 
+    with open("utils/data/config.json") as f:
+        config = json.load(f)
 
+    # Przychody
+    przychody = sum([
+        roz.revenue_bar or 0,
+        roz.revenue_kitchen or 0,
+        roz.revenue_entry or 0,
+        roz.revenue_other or 0
+    ])
+
+    # Koszty
+    koszty = sum([
+        roz.cost_bar or 0,
+        roz.cost_waiters or 0,
+        roz.cost_kitchen or 0,
+        roz.cost_marketing or 0,
+        roz.cost_security or 0,
+        roz.cost_other or 0
+    ])
+
+    wynik = przychody - koszty
+
+    # Wskaźniki (pojedyncze koszty vs przychody)
+    def licz_wskaznik(koszt, prog):
+        if not przychody:
+            return {"value": 0, "color": "⚠️"}
+        val = round((koszt or 0) / przychody * 100, 1)
+        if val <= prog["zielony"]:
+            color = "🟢"
+        elif val <= prog["żółty"]:
+            color = "🟡"
+        else:
+            color = "🔴"
+        return {"value": val, "color": color}
+
+    wskazniki = {
+        "obsługa_bar": licz_wskaznik(roz.cost_bar, config.get("progi_koszt_bar", {"zielony": 15, "żółty": 20})),
+        "obsługa_kuchnia": licz_wskaznik(roz.cost_kitchen, config.get("progi_koszt_kuchnia", {"zielony": 20, "żółty": 25})),
+        "obsługa_kelnerska": licz_wskaznik(roz.cost_waiters, config.get("progi_koszt_kelnerzy", {"zielony": 10, "żółty": 15})),
+        "marketing": licz_wskaznik(roz.cost_marketing, config.get("progi_koszt_marketing", {"zielony": 5, "żółty": 8}))
+    }
+
+    # Koszt pracowników: bar + kuchnia + kelnerzy + marketing
+    koszt_pracownikow = (
+        (roz.cost_bar or 0) +
+        (roz.cost_kitchen or 0) +
+        (roz.cost_waiters or 0) +
+        (roz.cost_marketing or 0)
+    )
+
+    # Wskaźnik łączny pracowniczy (% i kolor)
+    if not przychody:
+        wskaznik_pracownicy = {"value": 0, "color": "⚠️"}
+    else:
+        procent = round(koszt_pracownikow / przychody * 100, 1)
+        if procent < 30:
+            kolor = "🟢"
+        elif procent <= 40:
+            kolor = "🟡"
+        else:
+            kolor = "🔴"
+        wskaznik_pracownicy = {"value": procent, "color": kolor}
+
+    # Rozkład procentowy wewnątrz kosztów pracowników (posortowany)
+    elementy = {
+        "Obsługa bar": roz.cost_bar or 0,
+        "Obsługa kuchni": roz.cost_kitchen or 0,
+        "Obsługa kelnerska": roz.cost_waiters or 0,
+        "Marketing": roz.cost_marketing or 0
+    }
+
+    breakdown_sorted = []
+    if koszt_pracownikow > 0:
+        breakdown_sorted = sorted(
+            [{"nazwa": k, "procent": round(v / koszt_pracownikow * 100, 1)} for k, v in elementy.items()],
+            key=lambda x: x["procent"],
+            reverse=True
+        )
+
+    # Liczba pracowników
+    liczba_pracownikow = {
+        "bar": roz.staff_bar or 0,
+        "kuchnia": roz.staff_kitchen or 0,
+        "kelnerzy": roz.staff_waiters or 0,
+        "ochrona": roz.staff_security or 0
+    }
+
+    db_session.close()
+
+    return render_template(
+        'view_daily.html',
+        roz=roz,
+        przychody=przychody,
+        koszty=koszty,
+        wynik=wynik,
+        wskazniki=wskazniki,
+        liczba_pracownikow=liczba_pracownikow,
+        wskaznik_pracownicy=wskaznik_pracownicy,
+        breakdown_sorted=breakdown_sorted
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)

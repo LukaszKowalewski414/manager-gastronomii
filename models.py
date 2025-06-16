@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, Float, String, Date, Enum
+from sqlalchemy import Column, Integer, Float, String, Date, Enum, Text
 from sqlalchemy.orm import declarative_base
+
 import enum
 
 Base = declarative_base()
@@ -62,6 +63,7 @@ class Invoice(Base):
     supplier = Column(String, nullable=True)
     nip = Column(String, nullable=True)
     category = Column(String, nullable=True)
+    goods_type = Column(String(50))  # 'jedzenie', 'lody', 'bar', None
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
 
 # TABELA: Revenue (przychody)
@@ -108,4 +110,15 @@ class RozliczenieDzien(Base):
     cost_other = Column(Float, default=0.0)
     cost_other_comment = Column(String, nullable=True)
 
+    # Liczba pracowników
+    staff_bar = Column(Integer, nullable=True)
+    staff_kitchen = Column(Integer, nullable=True)
+    staff_waiters = Column(Integer, nullable=True)
+    staff_security = Column(Integer, nullable=True)
+
+    #Dodawanie notatek
+    notatka = Column(Text, nullable=True)
+
+    # Lokal
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
+

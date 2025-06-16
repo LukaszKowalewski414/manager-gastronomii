@@ -18,33 +18,49 @@
 
         <hr>
         <h5>Koszty</h5>
-        {% for field in ['bar', 'kelnerzy', 'kuchnia', 'ochrona'] %}
-        <div class="form-check mb-3">
-            {% set val = roz['koszt_' + field] %}
-            <input class="form-check-input" type="checkbox" id="koszt_{{ field }}" name="koszt_{{ field }}" {% if val %}checked{% endif %}>
-            <label class="form-check-label" for="koszt_{{ field }}">Obsługa {{ field }}</label>
-            <input type="number" step="0.01" class="form-control mt-1" name="koszt_{{ field }}_kwota" value="{{ val or '' }}" placeholder="Kwota (zł)">
-        </div>
-        {% endfor %}
 
-        <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="koszt_marketing" name="koszt_marketing" {% if roz.koszt_marketing %}checked{% endif %}>
-            <label class="form-check-label" for="koszt_marketing">Marketing</label>
-            <input type="number" step="0.01" class="form-control mt-1" name="koszt_marketing_kwota" value="{{ roz.koszt_marketing or '' }}" placeholder="Kwota (zł)">
-            <input type="text" class="form-control mt-1" name="koszt_marketing_komentarz" value="{{ roz.koszt_marketing_komentarz or '' }}" placeholder="Komentarz (opcjonalny)">
-        </div>
+<!-- BAR -->
+<div class="form-check mb-3">
+    {% set val = roz['koszt_bar'] %}
+    <input class="form-check-input" type="checkbox" id="koszt_bar" name="koszt_bar" {% if val %}checked{% endif %}>
+    <label class="form-check-label" for="koszt_bar">Obsługa bar</label>
+    <input type="number" step="0.01" class="form-control mt-1" name="koszt_bar_kwota" value="{{ val or '' }}" placeholder="Kwota (zł)">
+    <input type="number" class="form-control mt-1" name="staff_bar" min="0" value="{{ roz.staff_bar or '' }}" placeholder="Liczba pracowników – bar">
+</div>
 
-        <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="koszt_inne" name="koszt_inne" {% if roz.koszt_inne %}checked{% endif %}>
-            <label class="form-check-label" for="koszt_inne">Inne</label>
-            <input type="number" step="0.01" class="form-control mt-1" name="koszt_inne_kwota" value="{{ roz.koszt_inne or '' }}" placeholder="Kwota (zł)">
-            <input type="text" class="form-control mt-1" name="koszt_inne_komentarz" value="{{ roz.koszt_inne_komentarz or '' }}" placeholder="Komentarz (opcjonalny)">
-        </div>
+<!-- KELNERZY -->
+<div class="form-check mb-3">
+    {% set val = roz['koszt_kelnerzy'] %}
+    <input class="form-check-input" type="checkbox" id="koszt_kelnerzy" name="koszt_kelnerzy" {% if val %}checked{% endif %}>
+    <label class="form-check-label" for="koszt_kelnerzy">Obsługa kelnerska</label>
+    <input type="number" step="0.01" class="form-control mt-1" name="koszt_kelnerzy_kwota" value="{{ val or '' }}" placeholder="Kwota (zł)">
+    <input type="number" class="form-control mt-1" name="staff_waiters" min="0" value="{{ roz.staff_waiters or '' }}" placeholder="Liczba pracowników – kelnerzy">
+</div>
 
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-success"> Zapisz zmiany</button>
-        </div>
+<!-- KUCHNIA -->
+<div class="form-check mb-3">
+    {% set val = roz['koszt_kuchnia'] %}
+    <input class="form-check-input" type="checkbox" id="koszt_kuchnia" name="koszt_kuchnia" {% if val %}checked{% endif %}>
+    <label class="form-check-label" for="koszt_kuchnia">Obsługa kuchni</label>
+    <input type="number" step="0.01" class="form-control mt-1" name="koszt_kuchnia_kwota" value="{{ val or '' }}" placeholder="Kwota (zł)">
+    <input type="number" class="form-control mt-1" name="staff_kitchen" min="0" value="{{ roz.staff_kitchen or '' }}" placeholder="Liczba pracowników – kuchnia">
+</div>
+
+<!-- OCHRONA -->
+<div class="form-check mb-3">
+    {% set val = roz['koszt_ochrona'] %}
+    <input class="form-check-input" type="checkbox" id="koszt_ochrona" name="koszt_ochrona" {% if val %}checked{% endif %}>
+    <label class="form-check-label" for="koszt_ochrona">Ochrona</label>
+    <input type="number" step="0.01" class="form-control mt-1" name="koszt_ochrona_kwota" value="{{ val or '' }}" placeholder="Kwota (zł)">
+    <input type="number" class="form-control mt-1" name="staff_security" min="0" value="{{ roz.staff_security or '' }}" placeholder="Liczba pracowników – ochrona">
+</div>
+
     </form>
+
+ <hr>
+<h5>Notatka</h5>
+<textarea class="form-control mb-3" name="notatka" rows="4" placeholder="Możesz tu dopisać dowolne informacje...">{{ roz['notatka'] }}</textarea>
+
 
     <!-- FORMULARZ USUWANIA -->
     <form method="POST" action="{{ url_for('delete_daily', data=data) }}" onsubmit="return confirm('Czy na pewno chcesz usunąć rozliczenie dnia?');">
