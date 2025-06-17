@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, session, redirect, url_for
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
 from models import Revenue, Invoice, RozliczenieDzien
+from datetime import date
 import datetime
 from sqlalchemy import func
 from collections import defaultdict
@@ -269,8 +270,9 @@ def daily_summary():
 
 @app.route('/monthly-summary')
 def monthly_summary():
-    selected_year = int(request.args.get('year', 2025))
-    selected_month = int(request.args.get('month', 4))
+    today = date.today()
+    selected_month = int(request.args.get('month', today.month))
+    selected_year = int(request.args.get('year', today.year))
 
     start_date = datetime.date(selected_year, selected_month, 1)
     if selected_month == 12:
