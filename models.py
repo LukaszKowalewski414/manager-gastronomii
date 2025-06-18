@@ -65,6 +65,8 @@ class Invoice(Base):
     category = Column(String, nullable=True)
     goods_type = Column(String(50))  # 'jedzenie', 'lody', 'bar', None
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
+    note = Column(Text, nullable=True)
+
 
 # TABELA: Revenue (przychody)
 class Revenue(Base):

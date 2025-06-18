@@ -79,6 +79,20 @@
       {% endfor %}
     </ul>
 
+  <h5 class="text-center mt-5">👥 Łączny koszt pracowników</h5>
+<div class="text-center mb-4">
+  <p><strong>{{ summary.staff_costs_percent|round(1) }}% {{ summary.staff_costs_percent_color }}</strong></p>
+  <ul class="list-group mt-3">
+    {% for label, value in summary.staff_costs_breakdown.items() %}
+      <li class="list-group-item d-flex justify-content-between">
+        <span>{{ label }}</span>
+        <span>{{ value|round(1) }}%</span>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+
     <h5 class="text-center">📉 Koszty według kategorii:</h5>
     <ul class="list-group mb-4">
       {% for name, value in summary.expense_breakdown.items() %}

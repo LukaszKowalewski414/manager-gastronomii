@@ -39,7 +39,8 @@ def add_invoice():
             supplier=form_data.get('supplier', ''),
             category=form_data['category'],
             goods_type=form_data.get("goods_type"),
-            lokal=session['lokal']
+            lokal=session['lokal'],
+            note=form_data.get('note', '').strip()
         )
         db_session.add(invoice)
         db_session.commit()
@@ -66,6 +67,7 @@ def edit_invoice(invoice_id):
         invoice.category = request.form['category']
         invoice.goods_type = form_data.get("goods_type")
         invoice.net_amount = float(request.form.get('net_amount', 0))
+        invoice.note = request.form.get('note', '').strip()
         db_session.commit()
         db_session.close()
         return redirect(url_for('monthly_summary'))
@@ -464,6 +466,23 @@ def summary_period():
         total_expenses = sum(expense_breakdown.values())
         result = total_income - total_expenses
 
+        # Wskaźniki kosztów pracowników
+        staff_keys = ["Obsługa baru", "Obsługa kuchni", "Obsługa kelnerska", "Marketing"]
+        total_staff_costs = sum(expense_breakdown.get(k, 0) for k in staff_keys)
+        staff_costs_percent = (total_staff_costs / total_income * 100) if total_income else 0
+
+        if staff_costs_percent < 30:
+            color = "🟢"
+        elif staff_costs_percent < 40:
+            color = "🟡"
+        else:
+            color = "🔴"
+
+        staff_costs_breakdown = {}
+        for k in staff_keys:
+            v = expense_breakdown.get(k, 0)
+            staff_costs_breakdown[k] = (v / total_staff_costs * 100) if total_staff_costs else 0
+
         return render_template(
             "summary_period.html",
             summary={
@@ -472,7 +491,10 @@ def summary_period():
                 "total_expenses": round(total_expenses, 2),
                 "result": round(result, 2),
                 "income_breakdown": income_breakdown,
-                "expense_breakdown": expense_breakdown
+                "expense_breakdown": expense_breakdown,
+                "staff_costs_percent": round(staff_costs_percent, 1),
+                "staff_costs_percent_color": color,
+                "staff_costs_breakdown": staff_costs_breakdown
             },
             now=datetime.datetime.now()
         )
