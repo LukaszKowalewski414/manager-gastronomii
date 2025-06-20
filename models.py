@@ -1,11 +1,12 @@
 from sqlalchemy import Column, Integer, Float, String, Date, Enum, Text
 from sqlalchemy.orm import declarative_base
-
 import enum
 
 Base = declarative_base()
 
+# ===============================
 # ENUMY
+# ===============================
 
 class KategoriaPracownika(enum.Enum):
     bar = "bar"
@@ -20,7 +21,9 @@ class KategoriaFaktury(enum.Enum):
     podatki = "podatki"
     inne = "inne"
 
-# TABELA: Utarg (opcjonalna, używana tylko jeśli nadal działa)
+# ===============================
+# TABELA: Utarg (starszy system)
+# ===============================
 class Utarg(Base):
     __tablename__ = "utargi"
     id = Column(Integer, primary_key=True)
@@ -28,7 +31,9 @@ class Utarg(Base):
     bar = Column(Float, default=0.0)
     bramka = Column(Float, default=0.0)
 
+# ===============================
 # TABELA: Koszty pracowników (starszy system)
+# ===============================
 class KosztPracownika(Base):
     __tablename__ = "koszty_pracownikow"
     id = Column(Integer, primary_key=True)
@@ -36,7 +41,9 @@ class KosztPracownika(Base):
     kwota = Column(Float, nullable=False)
     kategoria = Column(Enum(KategoriaPracownika), nullable=False)
 
-# TABELA: Faktura (starsza uproszczona wersja)
+# ===============================
+# TABELA: Faktura (starszy system)
+# ===============================
 class Faktura(Base):
     __tablename__ = "faktury"
     id = Column(Integer, primary_key=True)
@@ -44,7 +51,9 @@ class Faktura(Base):
     kwota = Column(Float, nullable=False)
     kategoria = Column(Enum(KategoriaFaktury), nullable=False)
 
+# ===============================
 # TABELA: Dostawcy
+# ===============================
 class Dostawca(Base):
     __tablename__ = "dostawcy"
     id = Column(Integer, primary_key=True)
@@ -52,14 +61,16 @@ class Dostawca(Base):
     nip = Column(String, nullable=False)
     kategoria = Column(Enum(KategoriaFaktury), nullable=False)
 
-# TABELA: Invoice (faktury używane w systemie webowym)
+# ===============================
+# TABELA: Invoice (nowy system)
+# ===============================
 class Invoice(Base):
     __tablename__ = 'invoices'
 
     id = Column(Integer, primary_key=True)
-    invoice_date = Column(Date, nullable=False)  # zmienione z 'date'
-    gross_amount = Column(Float, nullable=False)  # zmienione z 'amount_gross'
-    net_amount = Column(Float, nullable=True)     # zmienione z 'amount_net'
+    invoice_date = Column(Date, nullable=False)
+    gross_amount = Column(Float, nullable=False)
+    net_amount = Column(Float, nullable=True)
     supplier = Column(String, nullable=True)
     nip = Column(String, nullable=True)
     category = Column(String, nullable=True)
@@ -67,8 +78,9 @@ class Invoice(Base):
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
     note = Column(Text, nullable=True)
 
-
-# TABELA: Revenue (przychody)
+# ===============================
+# TABELA: Revenue (nowy system)
+# ===============================
 class Revenue(Base):
     __tablename__ = 'revenues'
 
@@ -76,9 +88,11 @@ class Revenue(Base):
     revenue_date = Column(Date, nullable=False)
     amount = Column(Float, nullable=False)
     revenue_type = Column(String, nullable=False)
-    lokal = Column(String, nullable=False, default='Rokoko 2.0')  # dodane
+    lokal = Column(String, nullable=False, default='Rokoko 2.0')
 
-# TABELA: EmployeeCost (jeśli używasz do raportowania)
+# ===============================
+# TABELA: Koszty pracowników (nowy system)
+# ===============================
 class EmployeeCost(Base):
     __tablename__ = 'employee_costs'
 
@@ -88,12 +102,14 @@ class EmployeeCost(Base):
     department = Column(String, nullable=False)
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
 
+# ===============================
 # TABELA: Rozliczenie dzienne
+# ===============================
 class RozliczenieDzien(Base):
     __tablename__ = 'rozliczenia_dzienne'
 
     id = Column(Integer, primary_key=True)
-    daily_date = Column(Date, nullable=False, unique=True)  # zmienione z 'data'
+    daily_date = Column(Date, nullable=False)
 
     # Przychody
     revenue_bar = Column(Float, default=0.0)
@@ -118,9 +134,8 @@ class RozliczenieDzien(Base):
     staff_waiters = Column(Integer, nullable=True)
     staff_security = Column(Integer, nullable=True)
 
-    #Dodawanie notatek
+    # Notatka
     notatka = Column(Text, nullable=True)
 
-    # Lokal
+    # Lokal (kluczowe!)
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
-

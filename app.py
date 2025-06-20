@@ -19,6 +19,10 @@ app.secret_key = "Sbc3394left!"
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+def get_current_lokal():
+    return session.get('lokal', 'Rokoko 2.0')
+
+
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -39,7 +43,7 @@ def add_invoice():
             supplier=form_data.get('supplier', ''),
             category=form_data['category'],
             goods_type=form_data.get("goods_type"),
-            lokal=session['lokal'],
+            lokal=get_current_lokal(),
             note=form_data.get('note', '').strip()
         )
         db_session.add(invoice)
@@ -57,7 +61,16 @@ def add_invoice():
 @app.route('/edit_invoice/<int:invoice_id>', methods=['GET', 'POST'])
 def edit_invoice(invoice_id):
     db_session = Session()
-    invoice = db_session.query(Invoice).get(invoice_id)
+
+    # 🛡️ Zabezpiecz pobieranie tylko faktur z aktualnego lokalu
+    invoice = db_session.query(Invoice).filter_by(
+        id=invoice_id,
+        lokal=get_current_lokal()
+    ).first()
+
+    if not invoice:
+        db_session.close()
+        return "Brak dostępu lub faktura nie istnieje", 404
 
     if request.method == 'POST':
         invoice.invoice_date = datetime.datetime.strptime(request.form['invoice_date'], "%Y-%m-%d").date()
@@ -65,9 +78,10 @@ def edit_invoice(invoice_id):
         invoice.supplier = request.form['supplier_name']
         invoice.nip = request.form['supplier_nip']
         invoice.category = request.form['category']
-        invoice.goods_type = form_data.get("goods_type")
+        invoice.goods_type = request.form.get("goods_type")
         invoice.net_amount = float(request.form.get('net_amount', 0))
         invoice.note = request.form.get('note', '').strip()
+
         db_session.commit()
         db_session.close()
         return redirect(url_for('monthly_summary'))
@@ -169,13 +183,20 @@ def add_daily():
             daily_date = datetime.datetime.strptime(data_str, '%Y-%m-%d').date()
 
             # 🔄 Sprawdź, czy taki dzień już istnieje
-            existing = db_session.query(RozliczenieDzien).filter_by(daily_date=daily_date).first()
+            existing = db_session.query(RozliczenieDzien).filter_by(
+                daily_date=daily_date,
+                lokal=get_current_lokal()
+            ).first()
+
             if existing:
                 db_session.close()
                 return render_template('daily_exists.html', data=data_str)
 
             # 📦 Stwórz nowe rozliczenie
-            roz = RozliczenieDzien(daily_date=daily_date)
+            roz = RozliczenieDzien(
+                daily_date=daily_date,
+                lokal=get_current_lokal()
+            )
 
             def get_kwota(field):
                 val = request.form.get(f"kwota_{field}")
@@ -247,7 +268,11 @@ def daily_summary():
 
     dni_miesiaca = []
     for d in wszystkie_daty:
-        roz = db_session.query(RozliczenieDzien).filter_by(daily_date=d, lokal=session['lokal']).first()
+        roz = db_session.query(RozliczenieDzien).filter_by(
+            daily_date=d,
+            lokal=get_current_lokal()
+        ).first()
+
         if roz:
             dni_miesiaca.append({
                 'data': d,
@@ -288,7 +313,7 @@ def monthly_summary():
     rozliczenia = db_session.query(RozliczenieDzien).filter(
         RozliczenieDzien.daily_date >= start_date,
         RozliczenieDzien.daily_date <= end_date,
-        RozliczenieDzien.lokal == session['lokal']
+        RozliczenieDzien.lokal == get_current_lokal()
     ).all()
 
     total_revenue = sum([
@@ -314,7 +339,7 @@ def monthly_summary():
     total_costs_faktury = db_session.query(func.sum(Invoice.gross_amount)).filter(
         Invoice.invoice_date >= start_date,
         Invoice.invoice_date <= end_date,
-        Invoice.lokal == session['lokal']
+        Invoice.lokal == get_current_lokal()
     ).scalar() or 0
 
     # --- SUMA całkowita kosztów
@@ -335,7 +360,7 @@ def monthly_summary():
     invoices = db_session.query(Invoice).filter(
         Invoice.invoice_date >= start_date,
         Invoice.invoice_date <= end_date,
-        Invoice.lokal == session['lokal']
+        Invoice.lokal == get_current_lokal()
     ).all()
 
     db_session.close()
@@ -444,7 +469,7 @@ def summary_period():
         entries = db_session.query(RozliczenieDzien).filter(
             RozliczenieDzien.daily_date >= date_range[0],
             RozliczenieDzien.daily_date <= date_range[1],
-            RozliczenieDzien.lokal == session['lokal']
+            RozliczenieDzien.lokal == get_current_lokal()
         ).all()
 
         income_breakdown = {
@@ -506,7 +531,14 @@ def summary_period():
 def edit_daily(data):
     db_session = Session()
     data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
-    roz = db_session.query(RozliczenieDzien).filter_by(daily_date=data_obj).first()
+    roz = db_session.query(RozliczenieDzien).filter_by(
+        daily_date=data_obj,
+        lokal=get_current_lokal()
+    ).first()
+
+    if not roz:
+        db_session.close()
+        return "Rozliczenie dnia nie istnieje dla wybranego lokalu", 404
 
     if request.method == 'POST':
         def get_kwota(field):
@@ -577,7 +609,11 @@ def delete_daily(data):
     lokal = session.get("lokal")  # jeśli rozliczenia są przypisane do lokalu
     data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
 
-    roz = db_session.query(RozliczenieDzien).filter_by(daily_date=data_obj, lokal=lokal).first()
+    roz = db_session.query(RozliczenieDzien).filter_by(
+        daily_date=data_obj,
+        lokal=get_current_lokal()
+    ).first()
+
     if roz:
         db_session.delete(roz)
         db_session.commit()
@@ -588,7 +624,9 @@ def delete_daily(data):
 @app.route('/sync-revenue')
 def sync_revenue():
     db_session = Session()
-    rozliczenia = db_session.query(RozliczenieDzien).all()
+    rozliczenia = db_session.query(RozliczenieDzien).filter_by(
+        lokal=get_current_lokal()
+    ).all()
     dodano = 0
 
     for r in rozliczenia:
@@ -657,7 +695,11 @@ def save_defaults():
 @app.route('/view_daily/<int:id>')
 def view_daily(id):
     db_session = Session()
-    roz = db_session.query(RozliczenieDzien).filter_by(id=id).first()
+    roz = db_session.query(RozliczenieDzien).filter_by(
+        id=id,
+        lokal=get_current_lokal()
+    ).first()
+
     if not roz:
         return "Nie znaleziono rozliczenia", 404
 
