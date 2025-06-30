@@ -74,24 +74,10 @@
       {% for name, value in summary.income_breakdown.items() %}
         <li class="list-group-item d-flex justify-content-between">
           <span>{{ name }}</span>
-          <span>{{ value|round(2) }} zł</span>
+          <span>{{ (value or 0)|round(2) }} zł</span>
         </li>
       {% endfor %}
     </ul>
-
-  <h5 class="text-center mt-5">👥 Łączny koszt pracowników</h5>
-<div class="text-center mb-4">
-  <p><strong>{{ summary.staff_costs_percent|round(1) }}% {{ summary.staff_costs_percent_color }}</strong></p>
-  <ul class="list-group mt-3">
-    {% for label, value in summary.staff_costs_breakdown.items() %}
-      <li class="list-group-item d-flex justify-content-between">
-        <span>{{ label }}</span>
-        <span>{{ value|round(1) }}%</span>
-      </li>
-    {% endfor %}
-  </ul>
-</div>
-
 
     <h5 class="text-center">📉 Koszty według kategorii:</h5>
     <ul class="list-group mb-4">
@@ -104,6 +90,28 @@
     </ul>
   {% endif %}
 </div>
+
+{% if summary %}
+  <h5 class="text-center mt-5">👥 Łączny koszt pracowników</h5>
+  <div class="text-center mb-4">
+    <p><strong>{{ (summary.staff_costs_percent or 0)|round(1) }}% {{ summary.staff_costs_percent_color }}</strong></p>
+    <ul class="list-group mt-3">
+      {% for label, value in summary.cost_percentage_by_category.items() %}
+        <li class="list-group-item d-flex justify-content-between">
+          <span>{{ label }}</span>
+          <span>
+            <span class="{% if value < 10 %}text-success
+                          {% elif value <= 14 %}text-warning
+                          {% else %}text-danger{% endif %}">
+              {{ (value or 0)|round(1) }}%
+            </span>
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
 
 <script>
 function toggleDateInputs() {

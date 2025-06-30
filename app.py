@@ -89,6 +89,18 @@ def edit_invoice(invoice_id):
     db_session.close()
     return render_template('edit_invoice.html', invoice=invoice)
 
+@app.route('/invoice/<int:invoice_id>')
+def view_invoice(invoice_id):
+    db_session = Session()
+    invoice = db_session.query(Invoice).get(invoice_id)
+    db_session.close()
+
+    if not invoice:
+        return "Faktura nie istnieje", 404
+
+    return render_template("view_invoice.html", invoice=invoice)
+
+
 @app.route('/delete_invoice/<int:invoice_id>', methods=['POST'])
 def delete_invoice(invoice_id):
     db_session = Session()
@@ -356,6 +368,16 @@ def monthly_summary():
         'faktury': total_costs_faktury
     }
 
+    # --- Wskaźniki procentowe względem utargu
+    cost_percentage_by_category = {}
+    if total_revenue > 0:
+        for key, value in cost_by_category.items():
+            percent = round((value / total_revenue) * 100, 1)
+            cost_percentage_by_category[key] = percent
+    else:
+        for key in cost_by_category:
+            cost_percentage_by_category[key] = 0.0
+
     # --- Faktury (do tabeli)
     invoices = db_session.query(Invoice).filter(
         Invoice.invoice_date >= start_date,
@@ -365,30 +387,38 @@ def monthly_summary():
 
     db_session.close()
 
+    # Wskaźniki pracowników względem przychodów bar i kuchnia
+    total_revenue_bar = sum(r.revenue_bar or 0 for r in rozliczenia)
+    total_revenue_kitchen = sum(r.revenue_kitchen or 0 for r in rozliczenia)
+    cost_bar = cost_by_category['obsługa baru']
+    cost_kitchen = cost_by_category['obsługa kuchni']
+
+    def color_for(value):
+        if value < 30:
+            return "🟢"
+        elif value <= 40:
+            return "🟡"
+        else:
+            return "🔴"
+
     summary = {
         'total_revenue': total_revenue,
         'total_costs': total_costs,
         'net_result': total_revenue - total_costs,
-        'cost_by_category': cost_by_category
+        'cost_by_category': cost_by_category,
+        'cost_percentage_by_category': cost_percentage_by_category,  # ← DODANE TO
+        'foodcost_bar': {
+            'value': round((cost_bar / total_revenue_bar) * 100, 1) if total_revenue_bar else 0.0,
+            'color': color_for(round((cost_bar / total_revenue_bar) * 100, 1)) if total_revenue_bar else "⚪️"
+        },
+        'foodcost_kitchen': {
+            'value': round((cost_kitchen / total_revenue_kitchen) * 100, 1) if total_revenue_kitchen else 0.0,
+            'color': color_for(
+                round((cost_kitchen / total_revenue_kitchen) * 100, 1)) if total_revenue_kitchen else "⚪️"
+        },
+        'foodcost_towar_bar': {'value': 0.0, 'color': "⚪️"},
+        'foodcost_towar_kitchen': {'value': 0.0, 'color': "⚪️"},
     }
-
-    foodcost_goods_kitchen = sum(f.net_amount or 0 for f in invoices if f.category == 'Towar' and f.goods_type == 'jedzenie')
-    foodcost_goods_bar = sum(f.net_amount or 0 for f in invoices if f.category == 'Towar' and f.goods_type == 'bar')
-
-    revenue_kitchen = sum(d.revenue_kitchen or 0 for d in rozliczenia)
-    revenue_bar = sum(d.revenue_bar or 0 for d in rozliczenia)
-
-    if revenue_bar:
-        foodcost_value = round((foodcost_goods_kitchen + foodcost_goods_bar) / revenue_bar * 100, 1)
-        if foodcost_value < 30:
-            foodcost_color = "🟢"
-        elif foodcost_value <= 35:
-            foodcost_color = "🟡"
-        else:
-            foodcost_color = "🔴"
-    else:
-        foodcost_value = 0
-        foodcost_color = "⚠️"
 
     def calc_foodcost(value, revenue):
         if revenue:
@@ -404,13 +434,25 @@ def monthly_summary():
             color = "⚠️"
         return {'value': percent, 'color': color}
 
-    summary["foodcost_bar"] = calc_foodcost(foodcost_goods_bar, revenue_bar)
-    summary["foodcost_kitchen"] = calc_foodcost(foodcost_goods_kitchen, revenue_kitchen)
+    # --- Nowe wskaźniki: koszt obsługi / przychód
+    cost_bar = sum(r.cost_bar or 0 for r in rozliczenia)
+    cost_kitchen = sum(r.cost_kitchen or 0 for r in rozliczenia)
 
-    summary["foodcost"] = {
-        "value": foodcost_value,
-        "color": foodcost_color
-    }
+    revenue_bar = sum(r.revenue_bar or 0 for r in rozliczenia)
+    revenue_kitchen = sum(r.revenue_kitchen or 0 for r in rozliczenia)
+
+    # FOODCOST = faktury / utarg
+    foodcost_goods_bar = sum(f.net_amount or 0 for f in invoices if
+                             (f.category or '').lower() == 'towar' and (f.goods_type or '').lower() == 'bar')
+    foodcost_goods_kitchen = sum(f.net_amount or 0 for f in invoices if
+                                 (f.category or '').lower() == 'towar' and (f.goods_type or '').lower() == 'jedzenie')
+
+    summary["foodcost_towar_bar"] = calc_foodcost(foodcost_goods_bar, revenue_bar)
+    summary["foodcost_towar_kitchen"] = calc_foodcost(foodcost_goods_kitchen, revenue_kitchen)
+
+    summary["foodcost_bar"] = calc_foodcost(cost_bar, revenue_bar)
+    summary["foodcost_kitchen"] = calc_foodcost(cost_kitchen, revenue_kitchen)
+
 
     return render_template(
         'monthly_summary.html',
@@ -491,7 +533,7 @@ def summary_period():
         total_expenses = sum(expense_breakdown.values())
         result = total_income - total_expenses
 
-        # Wskaźniki kosztów pracowników
+        # Wskaźnik ogólny – koszty pracowników / przychód
         staff_keys = ["Obsługa baru", "Obsługa kuchni", "Obsługa kelnerska", "Marketing"]
         total_staff_costs = sum(expense_breakdown.get(k, 0) for k in staff_keys)
         staff_costs_percent = (total_staff_costs / total_income * 100) if total_income else 0
@@ -503,10 +545,27 @@ def summary_period():
         else:
             color = "🔴"
 
-        staff_costs_breakdown = {}
-        for k in staff_keys:
-            v = expense_breakdown.get(k, 0)
-            staff_costs_breakdown[k] = (v / total_staff_costs * 100) if total_staff_costs else 0
+        # --- Szczegółowe przychody
+        total_bar_revenue = sum(r.revenue_bar or 0 for r in rozliczenia)
+        total_kitchen_revenue = sum(r.revenue_kitchen or 0 for r in rozliczenia)
+
+        # --- Wskaźniki procentowe względem właściwych przychodów
+        cost_percentage_by_category = {}
+
+        # obsługa baru / przychód baru
+        cost_bar = cost_by_category['obsługa baru']
+        cost_percentage_by_category['obsługa baru'] = round((cost_bar / total_bar_revenue) * 100,
+                                                            1) if total_bar_revenue else 0.0
+
+        # obsługa kuchni / przychód kuchni
+        cost_kitchen = cost_by_category['obsługa kuchni']
+        cost_percentage_by_category['obsługa kuchni'] = round((cost_kitchen / total_kitchen_revenue) * 100,
+                                                              1) if total_kitchen_revenue else 0.0
+
+        # reszta względem całego utargu
+        for key in ['obsługa kelnerska', 'marketing', 'ochrona', 'inne', 'faktury']:
+            value = cost_by_category[key]
+            cost_percentage_by_category[key] = round((value / total_revenue) * 100, 1) if total_revenue else 0.0
 
         return render_template(
             "summary_period.html",
@@ -519,7 +578,8 @@ def summary_period():
                 "expense_breakdown": expense_breakdown,
                 "staff_costs_percent": round(staff_costs_percent, 1),
                 "staff_costs_percent_color": color,
-                "staff_costs_breakdown": staff_costs_breakdown
+                "staff_costs_breakdown": cost_percentage_by_category,
+                "cost_percentage_by_category": cost_percentage_by_category
             },
             now=datetime.datetime.now()
         )
@@ -606,7 +666,6 @@ def edit_daily(data):
 @app.route('/delete_daily/<data>', methods=['POST'])
 def delete_daily(data):
     db_session = Session()
-    lokal = session.get("lokal")  # jeśli rozliczenia są przypisane do lokalu
     data_obj = datetime.datetime.strptime(data, '%Y-%m-%d').date()
 
     roz = db_session.query(RozliczenieDzien).filter_by(

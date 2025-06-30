@@ -58,17 +58,22 @@
                     </td>
 
                     <td>
-                        {% if d.status == '✔' %}
-                            <a href="{{ url_for('view_daily', id=d.id) }}" class="btn btn-sm btn-outline-info me-1">podgląd</a>
-                            <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary">edytuj</a>
-                        {% else %}
-                            <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
-                               class="btn btn-sm border border-primary text-primary"
-                               style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
-                               dodaj
-                            </a>
-                        {% endif %}
-                    </td>
+    {% if d.status == '✔' %}
+        <a href="{{ url_for('view_daily', id=d.id) }}" class="btn btn-sm btn-outline-info me-1">podgląd</a>
+        <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary me-1">edytuj</a>
+        <form action="{{ url_for('delete_daily', data=d.data.strftime('%Y-%m-%d')) }}" method="POST" style="display:inline;">
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Na pewno chcesz usunąć to rozliczenie dnia?')">usuń</button>
+        </form>
+    {% else %}
+        <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
+           class="btn btn-sm border border-primary text-primary"
+           style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
+           dodaj
+        </a>
+    {% endif %}
+</td>
+
                 </tr>
                 {% endfor %}
             </tbody>

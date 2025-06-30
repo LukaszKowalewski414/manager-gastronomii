@@ -64,31 +64,67 @@
 
 <!-- Dolny rząd: mniejsze karty -->
 <div class="row text-center mb-5">
-    <div class="col-md-3 offset-md-3">
+    <!-- Wskaźnik kosztów pracowników bar -->
+    <div class="col-md-3">
         <div class="card p-3 shadow small">
-            <h6>🍸 Foodcost – bar</h6>
-            <p class="fs-5 mb-0">{{ summary.foodcost_bar['value'] }}%
-                <span class="{% if summary.foodcost_bar['value'] < 30 %}text-success
-                              {% elif summary.foodcost_bar['value'] <= 40 %}text-warning
+            <h6>🧑‍🍳 Koszty prac. – bar</h6>
+            {% set bar_val = summary.cost_percentage_by_category['obsługa baru'] %}
+            <p class="fs-5 mb-0">
+                {{ bar_val | round(1) }}%
+                <span class="{% if bar_val < 30 %}text-success
+                              {% elif bar_val <= 40 %}text-warning
                               {% else %}text-danger{% endif %}">
-                    {{ summary.foodcost_bar['color'] }}
+                    🔴
                 </span>
             </p>
         </div>
     </div>
+
+    <!-- Wskaźnik kosztów pracowników kuchnia -->
     <div class="col-md-3">
         <div class="card p-3 shadow small">
-            <h6>👨‍🍳 Foodcost – kuchnia</h6>
-            <p class="fs-5 mb-0">{{ summary.foodcost_kitchen['value'] }}%
-                <span class="{% if summary.foodcost_kitchen['value'] < 30 %}text-success
-                              {% elif summary.foodcost_kitchen['value'] <= 40 %}text-warning
+            <h6>🧑‍🍳 Koszty prac. – kuchnia</h6>
+            {% set kitchen_val = summary.cost_percentage_by_category['obsługa kuchni'] %}
+            <p class="fs-5 mb-0">
+                {{ kitchen_val | round(1) }}%
+                <span class="{% if kitchen_val < 30 %}text-success
+                              {% elif kitchen_val <= 40 %}text-warning
                               {% else %}text-danger{% endif %}">
-                    {{ summary.foodcost_kitchen['color'] }}
+                    🔴
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Foodcost – bar (towar) -->
+    <div class="col-md-3">
+        <div class="card p-3 shadow small">
+            <h6>🍋 Foodcost – bar (towar)</h6>
+            <p class="fs-5 mb-0">{{ summary.foodcost_towar_bar['value'] }}%
+                <span class="{% if summary.foodcost_towar_bar['value'] < 30 %}text-success
+                              {% elif summary.foodcost_towar_bar['value'] <= 40 %}text-warning
+                              {% else %}text-danger{% endif %}">
+                    {{ summary.foodcost_towar_bar['color'] }}
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Foodcost – kuchnia (towar) -->
+    <div class="col-md-3">
+        <div class="card p-3 shadow small">
+            <h6>🍽 Foodcost – kuchnia (towar)</h6>
+            <p class="fs-5 mb-0">{{ summary.foodcost_towar_kitchen['value'] }}%
+                <span class="{% if summary.foodcost_towar_kitchen['value'] < 30 %}text-success
+                              {% elif summary.foodcost_towar_kitchen['value'] <= 40 %}text-warning
+                              {% else %}text-danger{% endif %}">
+                    {{ summary.foodcost_towar_kitchen['color'] }}
                 </span>
             </p>
         </div>
     </div>
 </div>
+
 
 
     <!-- Wykresy -->
@@ -177,6 +213,7 @@
             <td>{{ invoice.supplier_nip }}</td>
             <td>{{ invoice.category }}</td>
             <td>
+                <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-info"> Podgląd</a>
                 <a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-outline-secondary me-2">edytuj</a>
                 <form action="{{ url_for('delete_invoice', invoice_id=invoice.id) }}" method="POST" style="display:inline;">
                     <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Na pewno chcesz usunąć tę fakturę?')">usuń</button>
