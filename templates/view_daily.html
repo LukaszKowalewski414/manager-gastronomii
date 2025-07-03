@@ -2,8 +2,24 @@
 
 {% block content %}
 <div class="container my-5">
-  <h2 class="text-center text-primary mb-3">📆 Rozliczenie dzienne</h2>
-  <p class="text-center"><strong>Data:</strong> {{ roz.daily_date.strftime('%Y-%m-%d') }}</p>
+<div class="d-flex justify-content-center align-items-center mb-2">
+  {% if prev_id %}
+    <a href="{{ url_for('view_daily', id=prev_id) }}" class="btn btn-sm btn-outline-secondary me-3">← Poprzedni</a>
+  {% else %}
+    <button class="btn btn-sm btn-outline-secondary me-3" disabled>←</button>
+  {% endif %}
+
+  <h2 class="text-primary mb-0">📆 Rozliczenie dzienne</h2>
+
+  {% if next_id %}
+    <a href="{{ url_for('view_daily', id=next_id) }}" class="btn btn-sm btn-outline-secondary ms-3">Następny →</a>
+  {% else %}
+    <button class="btn btn-sm btn-outline-secondary ms-3" disabled>→</button>
+  {% endif %}
+</div>
+
+<p class="text-center"><strong>Data:</strong> {{ roz.daily_date.strftime('%Y-%m-%d') }}</p>
+
 
   <div class="row mt-4">
     <!-- Lewa kolumna: wszystkie dane -->

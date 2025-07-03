@@ -286,15 +286,35 @@ def daily_summary():
         ).first()
 
         if roz:
+            suma_przychodow = sum([
+                roz.revenue_bar or 0,
+                roz.revenue_kitchen or 0,
+                roz.revenue_entry or 0,
+                roz.revenue_other or 0
+            ])
+
+            suma_kosztow = sum([
+                roz.cost_bar or 0,
+                roz.cost_waiters or 0,
+                roz.cost_kitchen or 0,
+                roz.cost_marketing or 0,
+                roz.cost_security or 0,
+                roz.cost_other or 0
+            ])
+
             dni_miesiaca.append({
                 'data': d,
                 'status': '✔',
-                'id': roz.id  # ← dodajemy ID
+                'id': roz.id,
+                'suma_przychodow': suma_przychodow,
+                'suma_kosztow': suma_kosztow
             })
         else:
             dni_miesiaca.append({
                 'data': d,
-                'status': '✘'
+                'status': '✘',
+                'suma_przychodow': None,
+                'suma_kosztow': None
             })
 
     db_session.close()
@@ -754,13 +774,26 @@ def save_defaults():
 @app.route('/view_daily/<int:id>')
 def view_daily(id):
     db_session = Session()
-    roz = db_session.query(RozliczenieDzien).filter_by(
-        id=id,
-        lokal=get_current_lokal()
-    ).first()
+    lokal = get_current_lokal()
+
+    roz = db_session.query(RozliczenieDzien).filter_by(id=id, lokal=lokal).first()
 
     if not roz:
         return "Nie znaleziono rozliczenia", 404
+
+    current_date = roz.daily_date
+
+    # ⬅️ Poprzedni dzień
+    prev = db_session.query(RozliczenieDzien).filter(
+        RozliczenieDzien.lokal == lokal,
+        RozliczenieDzien.daily_date < current_date
+    ).order_by(RozliczenieDzien.daily_date.desc()).first()
+
+    # ➡️ Następny dzień
+    next = db_session.query(RozliczenieDzien).filter(
+        RozliczenieDzien.lokal == lokal,
+        RozliczenieDzien.daily_date > current_date
+    ).order_by(RozliczenieDzien.daily_date.asc()).first()
 
     with open("utils/data/config.json") as f:
         config = json.load(f)
@@ -785,7 +818,7 @@ def view_daily(id):
 
     wynik = przychody - koszty
 
-    # Wskaźniki (pojedyncze koszty vs przychody)
+    # Wskaźniki
     def licz_wskaznik(koszt, prog):
         if not przychody:
             return {"value": 0, "color": "⚠️"}
@@ -805,7 +838,6 @@ def view_daily(id):
         "marketing": licz_wskaznik(roz.cost_marketing, config.get("progi_koszt_marketing", {"zielony": 5, "żółty": 8}))
     }
 
-    # Koszt pracowników: bar + kuchnia + kelnerzy + marketing
     koszt_pracownikow = (
         (roz.cost_bar or 0) +
         (roz.cost_kitchen or 0) +
@@ -813,20 +845,17 @@ def view_daily(id):
         (roz.cost_marketing or 0)
     )
 
-    # Wskaźnik łączny pracowniczy (% i kolor)
     if not przychody:
         wskaznik_pracownicy = {"value": 0, "color": "⚠️"}
     else:
         procent = round(koszt_pracownikow / przychody * 100, 1)
-        if procent < 30:
-            kolor = "🟢"
-        elif procent <= 40:
-            kolor = "🟡"
-        else:
-            kolor = "🔴"
+        kolor = (
+            "🟢" if procent < 30 else
+            "🟡" if procent <= 40 else
+            "🔴"
+        )
         wskaznik_pracownicy = {"value": procent, "color": kolor}
 
-    # Rozkład procentowy wewnątrz kosztów pracowników (posortowany)
     elementy = {
         "Obsługa bar": roz.cost_bar or 0,
         "Obsługa kuchni": roz.cost_kitchen or 0,
@@ -842,7 +871,6 @@ def view_daily(id):
             reverse=True
         )
 
-    # Liczba pracowników
     liczba_pracownikow = {
         "bar": roz.staff_bar or 0,
         "kuchnia": roz.staff_kitchen or 0,
@@ -861,8 +889,11 @@ def view_daily(id):
         wskazniki=wskazniki,
         liczba_pracownikow=liczba_pracownikow,
         wskaznik_pracownicy=wskaznik_pracownicy,
-        breakdown_sorted=breakdown_sorted
+        breakdown_sorted=breakdown_sorted,
+        prev_id=prev.id if prev else None,
+        next_id=next.id if next else None
     )
+
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -42,39 +42,53 @@
                     <th>Data</th>
                     <th>Status</th>
                     <th>Akcja</th>
+                    <th>Przychody</th>
+                    <th>Koszty</th>
                 </tr>
+
             </thead>
             <tbody>
                 {% for d in dni_miesiaca %}
                 <tr>
-                    <td>{{ d.data.strftime('%Y-%m-%d') }}</td>
+    <td>{{ d.data.strftime('%Y-%m-%d') }}</td>
 
-                    <td>
-                        {% if d.status == '✔' %}
-                            <span class="text-success">✅ Rozliczenie dodane</span>
-                        {% else %}
-                            <span class="text-danger">❌ Brak rozliczenia</span>
-                        {% endif %}
-                    </td>
+    <td>
+        {% if d.status == '✔' %}
+            <span class="text-success">✅ Rozliczenie dodane</span>
+        {% else %}
+            <span class="text-danger">❌ Brak rozliczenia</span>
+        {% endif %}
+    </td>
 
-                    <td>
-    {% if d.status == '✔' %}
-        <a href="{{ url_for('view_daily', id=d.id) }}" class="btn btn-sm btn-outline-info me-1">podgląd</a>
-        <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary me-1">edytuj</a>
-        <form action="{{ url_for('delete_daily', data=d.data.strftime('%Y-%m-%d')) }}" method="POST" style="display:inline;">
-            <button type="submit" class="btn btn-sm btn-outline-danger"
-                    onclick="return confirm('Na pewno chcesz usunąć to rozliczenie dnia?')">usuń</button>
-        </form>
-    {% else %}
-        <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
-           class="btn btn-sm border border-primary text-primary"
-           style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
-           dodaj
-        </a>
-    {% endif %}
-</td>
+    <td>
+        {% if d.status == '✔' %}
+            <a href="{{ url_for('view_daily', id=d.id) }}" class="btn btn-sm btn-outline-info me-1">podgląd</a>
+            <a href="{{ url_for('edit_daily', data=d.data.strftime('%Y-%m-%d')) }}" class="btn btn-sm btn-outline-secondary me-1">edytuj</a>
+            <form action="{{ url_for('delete_daily', data=d.data.strftime('%Y-%m-%d')) }}" method="POST" style="display:inline;">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Na pewno chcesz usunąć to rozliczenie dnia?')">usuń</button>
+            </form>
+        {% else %}
+            <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
+               class="btn btn-sm border border-primary text-primary"
+               style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
+               dodaj
+            </a>
+        {% endif %}
+    </td>
 
-                </tr>
+    <td>
+        {% if d.suma_przychodow is not none %}
+            {{ '%.2f'|format(d.suma_przychodow) }} zł
+        {% endif %}
+    </td>
+    <td>
+        {% if d.suma_kosztow is not none %}
+            {{ '%.2f'|format(d.suma_kosztow) }} zł
+        {% endif %}
+    </td>
+</tr>
+
                 {% endfor %}
             </tbody>
         </table>
