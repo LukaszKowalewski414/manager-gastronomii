@@ -41,6 +41,8 @@ def add_invoice():
             net_amount=float(form_data.get('net_amount', 0)),
             nip=form_data.get('supplier_nip', ''),
             supplier=form_data.get('supplier', ''),
+            invoice_number=form_data.get('invoice_number', ''),
+            description=form_data.get('description', ''),  # ⬅️ to było pominięte
             category=form_data['category'],
             goods_type=form_data.get("goods_type"),
             lokal=get_current_lokal(),

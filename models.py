@@ -68,15 +68,20 @@ class Invoice(Base):
     __tablename__ = 'invoices'
 
     id = Column(Integer, primary_key=True)
-    invoice_date = Column(Date, nullable=False)
-    gross_amount = Column(Float, nullable=False)
-    net_amount = Column(Float, nullable=True)
-    supplier = Column(String, nullable=True)
-    nip = Column(String, nullable=True)
-    category = Column(String, nullable=True)
-    goods_type = Column(String(50))  # 'jedzenie', 'lody', 'bar', None
-    lokal = Column(String, nullable=False, default='Rokoko 2.0')
-    note = Column(Text, nullable=True)
+    invoice_date = Column(Date)
+    gross_amount = Column(Float)
+    net_amount = Column(Float)
+    supplier = Column(String)
+    nip = Column(String)
+    category = Column(String)
+    goods_type = Column(String)
+    lokal = Column(String)
+    note = Column(Text)
+
+    # ✅ DODAJ TE POLA:
+    invoice_number = Column(String)
+    description = Column(String)
+
 
 # ===============================
 # TABELA: Revenue (nowy system)
@@ -139,3 +144,5 @@ class RozliczenieDzien(Base):
 
     # Lokal (kluczowe!)
     lokal = Column(String, nullable=False, default='Rokoko 2.0')
+
+

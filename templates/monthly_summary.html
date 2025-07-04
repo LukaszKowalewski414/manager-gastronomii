@@ -209,8 +209,8 @@
         <tr>
             <td>{{ invoice.invoice_date }}</td>
             <td>{{ invoice.gross_amount }} zł</td>
-            <td>{{ invoice.supplier_name }}</td>
-            <td>{{ invoice.supplier_nip }}</td>
+            <td>{{ invoice.supplier }}</td>
+            <td>{{ invoice.nip }}</td>
             <td>{{ invoice.category }}</td>
             <td>
                 <a href="{{ url_for('view_invoice', invoice_id=invoice.id) }}" class="btn btn-sm btn-info"> Podgląd</a>
