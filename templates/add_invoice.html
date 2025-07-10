@@ -40,11 +40,11 @@
         <div class="row mb-4">
             <div class="col-md-6">
                 <label for="net_amount" class="form-label">Kwota netto</label>
-                <input type="number" step="0.01" id="net_amount" name="net_amount" class="form-control" value="{{ dane.get('net_amount', '') }}">
+                <input type="text" step="0.01" id="net_amount" name="net_amount" class="form-control" value="{{ dane.get('net_amount', '') }}">
             </div>
             <div class="col-md-6">
                 <label for="gross_amount" class="form-label">Kwota brutto</label>
-                <input type="number" step="0.01" id="gross_amount" name="gross_amount" class="form-control" value="{{ dane.get('gross_amount', '') }}" required>
+                <input type="text" step="0.01" id="gross_amount" name="gross_amount" class="form-control" value="{{ dane.get('gross_amount', '') }}" required>
             </div>
         </div>
 
@@ -75,11 +75,6 @@
             </select>
         </div>
 
-        <div class="mb-3">
-            <label for="note" class="form-label">Notatka (opcjonalnie)</label>
-            <textarea name="note" class="form-control" rows="2" placeholder="Np. czynsz za 3 miesiące w Łukowie"></textarea>
-        </div>
-
 
         <div class="mb-4" id="goods_type_wrapper" style="display: none;">
     <label for="goods_type" class="form-label">Rodzaj towaru</label>
@@ -89,6 +84,11 @@
         <option value="bar" {% if dane.get('goods_type') == 'bar' %}selected{% endif %}>Bar</option>
     </select>
 </div>
+
+        <div class="mb-3">
+            <label for="note" class="form-label">Notatka (opcjonalnie)</label>
+            <textarea name="note" class="form-control" rows="2" placeholder="Np. czynsz za 3 miesiące w Łukowie"></textarea>
+        </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
@@ -115,4 +115,23 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.querySelector('form[action="{{ url_for("add_invoice") }}"]');
+    const fields = ['gross_amount', 'net_amount'];
+
+    form.addEventListener("submit", function () {
+        fields.forEach(id => {
+            const input = document.getElementById(id);
+            if (input && input.value) {
+                // Usuń spacje i zamień przecinki na kropki
+                input.value = input.value.replace(/\s/g, '').replace(',', '.');
+            }
+        });
+    });
+});
+</script>
+
+
 {% endblock %}

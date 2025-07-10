@@ -358,6 +358,13 @@ def monthly_summary():
         for r in rozliczenia
     ])
 
+    income_breakdown = {
+        "Bar": sum(r.revenue_bar or 0 for r in rozliczenia),
+        "Kuchnia": sum(r.revenue_kitchen or 0 for r in rozliczenia),
+        "Wejściówki": sum(r.revenue_entry or 0 for r in rozliczenia),
+        "Inne": sum(r.revenue_other or 0 for r in rozliczenia),
+    }
+
     # --- KOSZTY z rozliczeń dziennych
     total_costs_dzien = sum([
         (r.cost_bar or 0) +
@@ -427,6 +434,7 @@ def monthly_summary():
         'total_revenue': total_revenue,
         'total_costs': total_costs,
         'net_result': total_revenue - total_costs,
+        'income_breakdown': income_breakdown,
         'cost_by_category': cost_by_category,
         'cost_percentage_by_category': cost_percentage_by_category,  # ← DODANE TO
         'foodcost_bar': {
@@ -567,27 +575,24 @@ def summary_period():
         else:
             color = "🔴"
 
-        # --- Szczegółowe przychody
-        total_bar_revenue = sum(r.revenue_bar or 0 for r in rozliczenia)
-        total_kitchen_revenue = sum(r.revenue_kitchen or 0 for r in rozliczenia)
+        # Szczegółowe przychody
+        total_bar_revenue = sum(r.revenue_bar or 0 for r in entries)
+        total_kitchen_revenue = sum(r.revenue_kitchen or 0 for r in entries)
 
-        # --- Wskaźniki procentowe względem właściwych przychodów
+        # Wskaźniki procentowe względem właściwych przychodów
         cost_percentage_by_category = {}
 
-        # obsługa baru / przychód baru
-        cost_bar = cost_by_category['obsługa baru']
-        cost_percentage_by_category['obsługa baru'] = round((cost_bar / total_bar_revenue) * 100,
-                                                            1) if total_bar_revenue else 0.0
+        cost_bar = expense_breakdown['Obsługa baru']
+        cost_percentage_by_category['Obsługa baru'] = round((cost_bar / total_bar_revenue) * 100,
+                                                             1) if total_bar_revenue else 0.0
 
-        # obsługa kuchni / przychód kuchni
-        cost_kitchen = cost_by_category['obsługa kuchni']
-        cost_percentage_by_category['obsługa kuchni'] = round((cost_kitchen / total_kitchen_revenue) * 100,
-                                                              1) if total_kitchen_revenue else 0.0
+        cost_kitchen = expense_breakdown['Obsługa kuchni']
+        cost_percentage_by_category['Obsługa kuchnia'] = round((cost_kitchen / total_kitchen_revenue) * 100,
+                                                                1) if total_kitchen_revenue else 0.0
 
-        # reszta względem całego utargu
-        for key in ['obsługa kelnerska', 'marketing', 'ochrona', 'inne', 'faktury']:
-            value = cost_by_category[key]
-            cost_percentage_by_category[key] = round((value / total_revenue) * 100, 1) if total_revenue else 0.0
+        for key in ['Obsługa kelnerska', 'Marketing', 'Ochrona', 'Inne']:
+            value = expense_breakdown.get(key, 0)
+            cost_percentage_by_category[key] = round((value / total_income) * 100, 1) if total_income else 0.0
 
         return render_template(
             "summary_period.html",
@@ -600,7 +605,6 @@ def summary_period():
                 "expense_breakdown": expense_breakdown,
                 "staff_costs_percent": round(staff_costs_percent, 1),
                 "staff_costs_percent_color": color,
-                "staff_costs_breakdown": cost_percentage_by_category,
                 "cost_percentage_by_category": cost_percentage_by_category
             },
             now=datetime.datetime.now()

@@ -137,6 +137,24 @@
         </div>
     </div>
 
+    <h4 class="mb-3">Przychody według kategorii</h4>
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Kategoria</th>
+      <th>Kwota</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for category, value in summary.income_breakdown.items() %}
+      <tr>
+        <td>{{ category }}</td>
+        <td>{{ value|round(2) }} zł</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
 
     <!-- Tabela kosztów -->
     <h4 class="mb-3">Koszty według kategorii</h4>
