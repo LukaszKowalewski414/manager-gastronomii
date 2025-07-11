@@ -396,16 +396,27 @@ def monthly_summary():
         'inne': sum(r.cost_other or 0 for r in rozliczenia),
         'faktury': total_costs_faktury
     }
+    # Wskaźniki pracowników względem przychodów bar i kuchnia
+    total_revenue_bar = sum(r.revenue_bar or 0 for r in rozliczenia)
+    total_revenue_kitchen = sum(r.revenue_kitchen or 0 for r in rozliczenia)
+    cost_bar = cost_by_category['obsługa baru']
+    cost_kitchen = cost_by_category['obsługa kuchni']
 
-    # --- Wskaźniki procentowe względem utargu
+    # --- Wskaźniki procentowe względem właściwych przychodów
     cost_percentage_by_category = {}
-    if total_revenue > 0:
-        for key, value in cost_by_category.items():
-            percent = round((value / total_revenue) * 100, 1)
-            cost_percentage_by_category[key] = percent
-    else:
-        for key in cost_by_category:
-            cost_percentage_by_category[key] = 0.0
+
+    cost_bar = cost_by_category.get('obsługa baru', 0)
+    cost_kitchen = cost_by_category.get('obsługa kuchni', 0)
+
+    cost_percentage_by_category['obsługa baru'] = round((cost_bar / total_revenue_bar) * 100,
+                                                        1) if total_revenue_bar else 0.0
+    cost_percentage_by_category['obsługa kuchni'] = round((cost_kitchen / total_revenue_kitchen) * 100,
+                                                          1) if total_revenue_kitchen else 0.0
+
+    # Pozostałe koszty względem całości
+    for key in ['obsługa kelnerska', 'marketing', 'ochrona', 'inne', 'faktury']:
+        value = cost_by_category.get(key, 0)
+        cost_percentage_by_category[key] = round((value / total_revenue) * 100, 1) if total_revenue else 0.0
 
     # --- Faktury (do tabeli)
     invoices = db_session.query(Invoice).filter(
@@ -415,12 +426,6 @@ def monthly_summary():
     ).all()
 
     db_session.close()
-
-    # Wskaźniki pracowników względem przychodów bar i kuchnia
-    total_revenue_bar = sum(r.revenue_bar or 0 for r in rozliczenia)
-    total_revenue_kitchen = sum(r.revenue_kitchen or 0 for r in rozliczenia)
-    cost_bar = cost_by_category['obsługa baru']
-    cost_kitchen = cost_by_category['obsługa kuchni']
 
     def color_for(value):
         if value < 30:

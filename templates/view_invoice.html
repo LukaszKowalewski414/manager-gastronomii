@@ -1,20 +1,80 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h2>Podgląd faktury</h2>
+<div class="container my-5">
+    <h2 class="text-center mb-4 text-primary">Podgląd faktury</h2>
 
-<div class="card p-3 mb-3">
-    <p><strong>Data:</strong> {{ invoice.invoice_date }}</p>
-    <p><strong>Dostawca:</strong> {{ invoice.supplier }}</p>
-    <p><strong>NIP:</strong> {{ invoice.nip }}</p>
-    <p><strong>Kategoria:</strong> {{ invoice.category or 'brak' }}</p>
-    <p><strong>Rodzaj towaru:</strong> {{ invoice.goods_type or 'brak' }}</p>
-    <p><strong>Kwota netto:</strong> {{ invoice.net_amount }} zł</p>
-    <p><strong>Kwota brutto:</strong> {{ invoice.gross_amount }} zł</p>
-    <p><strong>Notatka:</strong> {{ invoice.note or '–––' }}</p>
+    <form>
+        <!-- Data -->
+        <div class="mb-4">
+            <label class="form-label">Data zakupu</label>
+            <input type="text" class="form-control" value="{{ invoice.invoice_date.strftime('%d.%m.%Y') }}" readonly>
+        </div>
 
+        <!-- Dostawca -->
+        <div class="mb-4">
+            <label class="form-label">Dostawca</label>
+            <input type="text" class="form-control" value="{{ invoice.supplier }}" readonly>
+        </div>
+
+        <!-- NIP -->
+        <div class="mb-4">
+            <label class="form-label">NIP dostawcy</label>
+            <input type="text" class="form-control" value="{{ invoice.nip }}" readonly>
+        </div>
+
+        <!-- Kwoty -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Kwota netto</label>
+                <input type="text" class="form-control" value="{{ invoice.net_amount }} zł" readonly>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Kwota brutto</label>
+                <input type="text" class="form-control" value="{{ invoice.gross_amount }} zł" readonly>
+            </div>
+        </div>
+
+        <!-- Numer faktury -->
+        <div class="mb-4">
+            <label class="form-label">Numer faktury (opcjonalnie)</label>
+            <input type="text" class="form-control" value="{{ invoice.invoice_number or '–––' }}" readonly>
+        </div>
+
+        <!-- Opis -->
+        <div class="mb-4">
+            <label class="form-label">Opis faktury / kosztu</label>
+            <input type="text" class="form-control" value="{{ invoice.description or '–––' }}" readonly>
+        </div>
+
+        <!-- Kategoria -->
+        <div class="mb-4">
+            <label class="form-label">Kategoria</label>
+            <input type="text" class="form-control" value="{{ invoice.category or '–––' }}" readonly>
+        </div>
+
+        <!-- Rodzaj towaru -->
+        <div class="mb-4">
+            <label class="form-label">Rodzaj towaru</label>
+            <input type="text" class="form-control" value="{{ invoice.goods_type or '–––' }}" readonly>
+        </div>
+
+        <!-- Notatka -->
+        <div class="mb-3">
+            <label class="form-label">Notatka (opcjonalnie)</label>
+            <textarea class="form-control" rows="2" readonly>{{ invoice.note or '–––' }}</textarea>
+        </div>
+
+        <!-- Przyciski -->
+        <div class="text-center mt-4 d-flex justify-content-center gap-3">
+            <a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" class="btn btn-outline-warning px-3 py-2">
+                 ✏️ Edytuj
+            </a>
+            <a href="{{ url_for('monthly_summary') }}" class="btn btn-outline-secondary px-3 py-2">
+                    ← Wróć
+            </a>
+        </div>
+
+    </form>
 </div>
-
-<a href="{{ url_for('edit_invoice', invoice_id=invoice.id) }}" class="btn btn-warning">✏️ Edytuj</a>
-<a href="{{ url_for('monthly_summary') }}" class="btn btn-secondary">← Wróć</a>
 {% endblock %}

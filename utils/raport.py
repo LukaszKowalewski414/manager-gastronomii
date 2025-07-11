@@ -54,6 +54,8 @@ def raport_miesieczny():
         if suma_bar > 0:
             print(f"- Barmani / bar: {koszt_barmanow / suma_bar:.2%}")
             print(f"- Food cost: {koszt_towaru / suma_bar:.2%}")
+        if suma_kuchnia > 0:
+            print(f"- Kucharze / kuchnia: {koszt_kucharzy / suma_kuchnia:.2%}")
 
     except Exception as e:
         print("❌ Błąd podczas generowania raportu:", e)

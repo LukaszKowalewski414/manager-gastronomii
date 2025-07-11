@@ -14,14 +14,15 @@
         <!-- Dostawca -->
         <div class="mb-4">
             <label for="supplier_name" class="form-label">Dostawca</label>
-            <input type="text" id="supplier_name" name="supplier_name" class="form-control" value="{{ invoice.supplier_name }}" required>
+            <input type="text" id="supplier_name" name="supplier_name" class="form-control" value="{{ invoice.supplier }}" required>
         </div>
 
         <!-- NIP -->
         <div class="mb-4">
             <label for="supplier_nip" class="form-label">NIP dostawcy</label>
-            <input type="text" id="supplier_nip" name="supplier_nip" class="form-control" value="{{ invoice.supplier_nip }}">
+            <input type="text" id="supplier_nip" name="supplier_nip" class="form-control" value="{{ invoice.nip }}">
         </div>
+
 
         <!-- Kwoty -->
         <div class="row mb-4">

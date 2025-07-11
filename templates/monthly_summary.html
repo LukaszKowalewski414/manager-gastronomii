@@ -72,10 +72,14 @@
             <p class="fs-5 mb-0">
                 {{ bar_val | round(1) }}%
                 <span class="{% if bar_val < 30 %}text-success
-                              {% elif bar_val <= 40 %}text-warning
-                              {% else %}text-danger{% endif %}">
-                    🔴
+                            {% elif bar_val <= 40 %}text-warning
+                             {% else %}text-danger{% endif %}">
+                    {% if bar_val < 30 %}🟢
+                    {% elif bar_val <= 40 %}🟡
+                    {% else %}🔴
+                    {% endif %}
                 </span>
+
             </p>
         </div>
     </div>
@@ -88,10 +92,14 @@
             <p class="fs-5 mb-0">
                 {{ kitchen_val | round(1) }}%
                 <span class="{% if kitchen_val < 30 %}text-success
-                              {% elif kitchen_val <= 40 %}text-warning
-                              {% else %}text-danger{% endif %}">
-                    🔴
-                </span>
+              {% elif kitchen_val <= 40 %}text-warning
+              {% else %}text-danger{% endif %}">
+    {% if kitchen_val < 30 %}🟢
+    {% elif kitchen_val <= 40 %}🟡
+    {% else %}🔴
+    {% endif %}
+</span>
+
             </p>
         </div>
     </div>
