@@ -69,11 +69,13 @@
                         onclick="return confirm('Na pewno chcesz usunąć to rozliczenie dnia?')">usuń</button>
             </form>
         {% else %}
-            <a href="{{ url_for('add_daily') }}?data={{ d.data.strftime('%Y-%m-%d') }}"
-               class="btn btn-sm border border-primary text-primary"
-               style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
-               dodaj
+            <a href="{{ url_for('add_daily', data=d.data.strftime('%Y-%m-%d')) }}"
+                class="btn btn-sm border border-primary text-primary"
+                style="padding: 2px 8px; font-size: 0.875rem; line-height: 1.2;">
+                dodaj
             </a>
+
+
         {% endif %}
     </td>
 

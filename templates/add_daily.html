@@ -8,7 +8,7 @@
     <form method="POST" action="{{ url_for('add_daily') }}">
         <div class="mb-3">
             <label for="data" class="form-label">Data</label>
-            <input type="date" id="data" name="data" class="form-control" required>
+            <input type="date" id="data" name="data" class="form-control" value="{{ default_date }}" required>
         </div>
 
         <!-- 🔹 Notatka – rozwijane pole -->

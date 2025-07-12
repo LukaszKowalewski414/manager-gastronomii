@@ -157,6 +157,7 @@ def invoice_saved(invoice_id):
 
 @app.route('/add_daily', methods=['GET', 'POST'])
 def add_daily():
+    default_date = request.args.get('data') or datetime.date.today().strftime('%Y-%m-%d')
     # 🔹 Załaduj aktualne ustawienia checkboxów
     with open('utils/data/config.json') as f:
         config = json.load(f)
@@ -258,7 +259,7 @@ def add_daily():
 
             return redirect(url_for('daily_summary', data=data_str))
 
-    return render_template('add_daily.html', config=config)
+    return render_template('add_daily.html', default_date=default_date)
 
 
 @app.route('/daily-added')
