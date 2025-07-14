@@ -875,13 +875,12 @@ def view_daily(id):
         "Marketing": roz.cost_marketing or 0
     }
 
-    breakdown_sorted = []
-    if koszt_pracownikow > 0:
-        breakdown_sorted = sorted(
-            [{"nazwa": k, "procent": round(v / koszt_pracownikow * 100, 1)} for k, v in elementy.items()],
-            key=lambda x: x["procent"],
-            reverse=True
-        )
+    breakdown_sorted = sorted(
+        [{"nazwa": k, "procent": round(v / przychody * 100, 1)} for k, v in elementy.items()],
+        key=lambda x: x["procent"],
+        reverse=True
+    )
+
 
     liczba_pracownikow = {
         "bar": roz.staff_bar or 0,
