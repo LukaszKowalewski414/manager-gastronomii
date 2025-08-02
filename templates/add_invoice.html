@@ -24,17 +24,22 @@
     <h2 class="text-center mb-4 text-primary">Dodaj fakturę / koszt</h2>
 
     <!-- Formularz uploadu pliku -->
-    <form method="POST" action="{{ url_for('upload_invoice') }}" enctype="multipart/form-data" class="mb-5">
+    <form method="POST" enctype="multipart/form-data" class="mb-5">
         <div class="mb-3">
             <label for="pdf_file" class="form-label">Wgraj plik PDF faktury</label>
             <input type="file" id="pdf_file" name="pdf_file" class="form-control" accept="application/pdf" required>
         </div>
 
-        <div class="text-center">
-            <div class="btn-wrapper">
-                <div class="badge-overlay">wersja testowa</div>
-                <button type="submit" class="btn btn-info btn-lg px-5"> Wczytaj fakturę</button>
-            </div>
+        <div class="text-center d-flex justify-content-center gap-3">
+            <button formaction="{{ url_for('upload_invoice') }}" type="submit" class="btn btn-info btn-lg px-4 position-relative">
+                Wczytaj fakturę
+                <span class="badge-overlay">V1</span>
+            </button>
+
+            <button formaction="{{ url_for('upload_invoice_v2') }}" type="submit" class="btn btn-success btn-lg px-4 position-relative">
+                Wczytaj fakturę 2
+                <span class="badge-overlay">V2</span>
+            </button>
         </div>
     </form>
 
@@ -60,16 +65,25 @@
         </div>
 
         <!-- Kwoty -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <label for="net_amount" class="form-label">Kwota netto</label>
-                <input type="text" step="0.01" id="net_amount" name="net_amount" class="form-control" value="{{ dane.get('net_amount', '') }}">
-            </div>
-            <div class="col-md-6">
-                <label for="gross_amount" class="form-label">Kwota brutto</label>
-                <input type="text" step="0.01" id="gross_amount" name="gross_amount" class="form-control" value="{{ dane.get('gross_amount', '') }}" required>
-            </div>
-        </div>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <label for="net_amount" class="form-label">Kwota netto</label>
+        <input type="text" step="0.01" id="net_amount" name="net_amount" class="form-control" value="{{ dane.get('net_amount', '') }}">
+    </div>
+    <div class="col-md-6">
+        <label for="gross_amount" class="form-label">Kwota brutto</label>
+        <input type="text" step="0.01" id="gross_amount" name="gross_amount" class="form-control" value="{{ dane.get('gross_amount', '') }}" required>
+    </div>
+</div>
+
+<!-- Checkbox: użyj netto -->
+<div class="form-check mb-4">
+    <input class="form-check-input" type="checkbox" id="use_netto" name="use_netto"
+        {% if dane.get('use_netto') %}checked{% endif %}>
+    <label class="form-check-label" for="use_netto">
+        Użyj kwoty netto do analiz (zamiast brutto)
+    </label>
+</div>
 
 
         <!-- Numer faktury -->
@@ -98,39 +112,21 @@
             </select>
         </div>
 
-
+        <!-- Rodzaj towaru -->
         <div class="mb-4" id="goods_type_wrapper" style="display: none;">
-    <label for="goods_type" class="form-label">Rodzaj towaru</label>
-    <select id="goods_type" name="goods_type" class="form-select">
-        <option value="">Wybierz rodzaj...</option>
-        <option value="jedzenie" {% if dane.get('goods_type') == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
-        <option value="bar" {% if dane.get('goods_type') == 'bar' %}selected{% endif %}>Bar</option>
-    </select>
-</div>
+            <label for="goods_type" class="form-label">Rodzaj towaru</label>
+            <select id="goods_type" name="goods_type" class="form-select">
+                <option value="">Wybierz rodzaj...</option>
+                <option value="jedzenie" {% if dane.get('goods_type') == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
+                <option value="bar" {% if dane.get('goods_type') == 'bar' %}selected{% endif %}>Bar</option>
+            </select>
+        </div>
 
+        <!-- Notatka -->
         <div class="mb-3">
             <label for="note" class="form-label">Notatka (opcjonalnie)</label>
             <textarea name="note" class="form-control" rows="2" placeholder="Np. czynsz za 3 miesiące w Łukowie"></textarea>
         </div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const category = document.getElementById("category");
-        const goodsTypeWrapper = document.getElementById("goods_type_wrapper");
-
-        function toggleGoodsType() {
-            if (category.value === "Towar") {
-                goodsTypeWrapper.style.display = "block";
-            } else {
-                goodsTypeWrapper.style.display = "none";
-            }
-        }
-
-        category.addEventListener("change", toggleGoodsType);
-        toggleGoodsType();  // Run on page load
-    });
-</script>
-
 
         <!-- Przycisk zapisz -->
         <div class="text-center">
@@ -141,6 +137,20 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    const category = document.getElementById("category");
+    const goodsTypeWrapper = document.getElementById("goods_type_wrapper");
+
+    function toggleGoodsType() {
+        if (category.value === "Towar") {
+            goodsTypeWrapper.style.display = "block";
+        } else {
+            goodsTypeWrapper.style.display = "none";
+        }
+    }
+
+    category.addEventListener("change", toggleGoodsType);
+    toggleGoodsType(); // run on load
+
     const form = document.querySelector('form[action="{{ url_for("add_invoice") }}"]');
     const fields = ['gross_amount', 'net_amount'];
 
@@ -148,13 +158,10 @@ document.addEventListener("DOMContentLoaded", function () {
         fields.forEach(id => {
             const input = document.getElementById(id);
             if (input && input.value) {
-                // Usuń spacje i zamień przecinki na kropki
                 input.value = input.value.replace(/\s/g, '').replace(',', '.');
             }
         });
     });
 });
 </script>
-
-
 {% endblock %}

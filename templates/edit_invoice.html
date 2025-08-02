@@ -36,6 +36,16 @@
             </div>
         </div>
 
+        <!-- Checkbox: użyj netto -->
+<div class="form-check mb-4">
+    <input class="form-check-input" type="checkbox" id="use_netto" name="use_netto"
+        {% if invoice.use_netto %}checked{% endif %}>
+    <label class="form-check-label" for="use_netto">
+        Użyj kwoty netto do analiz (zamiast brutto)
+    </label>
+</div>
+
+
         <!-- Numer faktury -->
         <div class="mb-4">
             <label for="invoice_number" class="form-label">Numer faktury (opcjonalnie)</label>

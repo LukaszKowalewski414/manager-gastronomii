@@ -44,12 +44,14 @@ def add_invoice():
             nip=form_data.get('supplier_nip', ''),
             supplier=form_data.get('supplier', ''),
             invoice_number=form_data.get('invoice_number', ''),
-            description=form_data.get('description', ''),  # ⬅️ to było pominięte
+            description=form_data.get('description', ''),
             category=form_data['category'],
             goods_type=form_data.get("goods_type"),
             lokal=get_current_lokal(),
-            note=form_data.get('note', '').strip()
+            note=form_data.get('note', '').strip(),
+            use_netto='use_netto' in form_data
         )
+
         db_session.add(invoice)
         db_session.commit()
 
@@ -85,6 +87,7 @@ def edit_invoice(invoice_id):
         invoice.goods_type = request.form.get("goods_type")
         invoice.net_amount = float(request.form.get('net_amount', 0))
         invoice.note = request.form.get('note', '').strip()
+        invoice.use_netto = 'use_netto' in request.form
 
         db_session.commit()
         db_session.close()
@@ -395,11 +398,17 @@ def monthly_summary():
     ])
 
     # --- KOSZTY z faktur
-    total_costs_faktury = db_session.query(func.sum(Invoice.gross_amount)).filter(
+    invoices = db_session.query(Invoice).filter(
         Invoice.invoice_date >= start_date,
         Invoice.invoice_date <= end_date,
         Invoice.lokal == get_current_lokal()
-    ).scalar() or 0
+    ).all()
+
+    # Sumuj brutto lub netto, zależnie od preferencji użytkownika
+    total_costs_faktury = sum(
+        inv.net_amount if inv.use_netto else inv.gross_amount
+        for inv in invoices
+    )
 
     # --- SUMA całkowita kosztów
     total_costs = total_costs_dzien + total_costs_faktury
@@ -495,10 +504,17 @@ def monthly_summary():
     revenue_kitchen = sum(r.revenue_kitchen or 0 for r in rozliczenia)
 
     # FOODCOST = faktury / utarg
-    foodcost_goods_bar = sum(f.net_amount or 0 for f in invoices if
-                             (f.category or '').lower() == 'towar' and (f.goods_type or '').lower() == 'bar')
-    foodcost_goods_kitchen = sum(f.net_amount or 0 for f in invoices if
-                                 (f.category or '').lower() == 'towar' and (f.goods_type or '').lower() == 'jedzenie')
+    foodcost_goods_bar = sum(
+        f.net_amount if f.use_netto else f.gross_amount
+        for f in invoices
+        if (f.category or '').lower() == 'towar' and (f.goods_type or '').lower() == 'bar'
+    )
+
+    foodcost_goods_kitchen = sum(
+        f.net_amount if f.use_netto else f.gross_amount
+        for f in invoices
+        if (f.category or '').lower() == 'towar' and (f.goods_type or '').lower() == 'jedzenie'
+    )
 
     summary["foodcost_towar_bar"] = calc_foodcost(foodcost_goods_bar, revenue_bar)
     summary["foodcost_towar_kitchen"] = calc_foodcost(foodcost_goods_kitchen, revenue_kitchen)

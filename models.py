@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, String, Date, Enum, Text
+from sqlalchemy import Column, Integer, Float, String, Date, Enum, Text, Boolean
 from sqlalchemy.orm import declarative_base
 import enum
 
@@ -77,6 +77,7 @@ class Invoice(Base):
     goods_type = Column(String)
     lokal = Column(String)
     note = Column(Text)
+    use_netto = Column(Boolean, default=False)
 
     # ✅ DODAJ TE POLA:
     invoice_number = Column(String)
