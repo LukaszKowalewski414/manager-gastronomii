@@ -10,6 +10,8 @@ from collections import defaultdict
 import os
 import json
 from utils.nip_utils import get_category_for_nip, save_category_for_nip
+from utils.pdf_reader_v2 import parse_invoice_from_pdf_v2
+
 
 with open('utils/data/config.json') as f:
     config = json.load(f)
@@ -139,6 +141,22 @@ def upload_invoice():
 
     return render_template('add_invoice.html', dane=dane)
 
+@app.route("/upload_invoice_v2", methods=["GET", "POST"])
+def upload_invoice_v2():
+    dane = {}
+    if request.method == "POST":
+        file = request.files["pdf_file"]
+        if file and file.filename.endswith(".pdf"):
+            filename = "tmp_invoice_v2.pdf"
+            filepath = os.path.join("uploads", filename)
+            file.save(filepath)
+            dane = parse_invoice_from_pdf_v2(filepath)
+            os.remove(filepath)
+        else:
+            return "Niepoprawny plik PDF"
+    return render_template("add_invoice.html", dane=dane)
+
+
 @app.route('/invoice-saved/<int:invoice_id>')
 def invoice_saved(invoice_id):
     db_session = Session()
@@ -259,8 +277,7 @@ def add_daily():
 
             return redirect(url_for('daily_summary', data=data_str))
 
-    return render_template('add_daily.html', default_date=default_date)
-
+    return render_template('add_daily.html', default_date=default_date, config=config)
 
 @app.route('/daily-added')
 def daily_added():
