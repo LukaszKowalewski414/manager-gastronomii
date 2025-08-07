@@ -109,20 +109,32 @@
             </select>
         </div>
 
-        <!-- Rodzaj towaru -->
-        <div class="mb-4" id="goods_type_wrapper" style="display: none;">
-            <label for="goods_type" class="form-label">Rodzaj towaru</label>
-            <select id="goods_type" name="goods_type" class="form-select">
-                <option value="">Wybierz rodzaj...</option>
-                <option value="jedzenie" {% if dane.get('goods_type') == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
-                <option value="bar" {% if dane.get('goods_type') == 'bar' %}selected{% endif %}>Bar</option>
-            </select>
+<!-- Rodzaj towaru -->
+<div class="mb-4" id="goods_type_wrapper" style="display: none;">
+    <label for="goods_type" class="form-label">Rodzaj towaru</label>
+    <select id="goods_type" name="goods_type" class="form-select {% if dane.get('goods_type_error') %}is-invalid{% endif %}">
+        <option value="">Wybierz rodzaj...</option>
+        <option value="jedzenie" {% if dane.get('goods_type') == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
+        <option value="bar" {% if dane.get('goods_type') == 'bar' %}selected{% endif %}>Bar</option>
+    </select>
+
+    {% if dane.get('goods_type_error') %}
+        <div class="invalid-feedback">
+            To pole jest wymagane dla kategorii „Towar”.
         </div>
+    {% else %}
+        <small class="form-text text-muted">
+            Wymagane dla kategorii „Towar” – wpływa na obliczenia food costów.
+        </small>
+    {% endif %}
+</div>
+
+
 
         <!-- Notatka -->
         <div class="mb-3">
             <label for="note" class="form-label">Notatka (opcjonalnie)</label>
-            <textarea name="note" class="form-control" rows="2" placeholder="Np. czynsz za 3 miesiące w Łukowie"></textarea>
+            <textarea name="note" class="form-control" rows="2" placeholder="Miejsce na opcjonalne notatki do faktury">{{ dane.get('note', '') }}</textarea>
         </div>
 
         <!-- Przycisk zapisz -->
@@ -148,6 +160,16 @@ document.addEventListener("DOMContentLoaded", function () {
     category.addEventListener("change", toggleGoodsType);
     toggleGoodsType(); // run on load
 
+    // 🔧 Przewiń do pola goods_type, jeśli był błąd (renderowany przez Jinja)
+    {% if dane.get('goods_type_error') %}
+        const goodsTypeSelect = document.getElementById("goods_type");
+        if (goodsTypeSelect) {
+            goodsTypeSelect.scrollIntoView({ behavior: "smooth", block: "center" });
+            goodsTypeSelect.focus();
+        }
+    {% endif %}
+
+    // 🔧 Czyszczenie i konwersja pól kwotowych
     const form = document.querySelector('form[action="{{ url_for("add_invoice") }}"]');
     const fields = ['gross_amount', 'net_amount'];
 
@@ -161,6 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
 
 <script>
 document.getElementById("toggleNettoBtn")?.addEventListener("click", function () {

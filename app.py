@@ -1,5 +1,5 @@
 # SKRÓCONY POCZĄTEK – BEZ ZMIAN
-from flask import Flask, render_template, request, session, redirect, url_for, jsonify
+from flask import Flask, flash, render_template, request, session, redirect, url_for, jsonify
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
 from models import Revenue, Invoice, RozliczenieDzien
@@ -10,7 +10,6 @@ from collections import defaultdict
 import os
 import json
 from utils.nip_utils import get_category_for_nip, save_category_for_nip
-from utils.pdf_reader_v2 import parse_invoice_from_pdf_v2
 from utils.config import get_use_netto, set_use_netto, get_default_use_netto_for_invoice, set_default_use_netto_for_invoice
 
 
@@ -38,6 +37,28 @@ def add_invoice():
         form_data = request.form.to_dict()
         use_netto = 'use_netto' in form_data  # 🟢 odczytaj checkbox
 
+        # 🟢 Walidacja: jeśli "towar", to goods_type musi być określone
+        if form_data.get('category', '').lower() == 'towar' and not form_data.get('goods_type'):
+            flash("Jeśli wybierasz kategorię 'Towar', musisz określić, czy chodzi o 'bar' czy 'jedzenie'.", "danger")
+
+            dane = {
+                "data": form_data.get("purchase_date"),
+                "firma": form_data.get("supplier"),
+                "nip": form_data.get("supplier_nip"),
+                "gross_amount": form_data.get("gross_amount"),
+                "net_amount": form_data.get("net_amount"),
+                "invoice_number": form_data.get("invoice_number"),
+                "description": form_data.get("description"),
+                "category": form_data.get("category"),
+                "goods_type": form_data.get("goods_type"),
+                "note": form_data.get("note", ''),
+                "use_netto": 'use_netto' in form_data,
+                "goods_type_error": True  # 🔴 znacznik błędu
+            }
+
+            return render_template("add_invoice.html", dane=dane, current_lokal=get_current_lokal(),
+                                   get_use_netto=get_use_netto)
+
         # 🟢 zapisz preferencję do config.json
         set_default_use_netto_for_invoice(get_current_lokal(), use_netto)
 
@@ -57,7 +78,7 @@ def add_invoice():
             goods_type=form_data.get("goods_type"),
             lokal=get_current_lokal(),
             note=form_data.get('note', '').strip(),
-            use_netto=use_netto  # 🟢 przypisz do faktury
+            use_netto=use_netto
         )
 
         db_session.add(invoice)
@@ -70,7 +91,6 @@ def add_invoice():
         db_session.close()
         return redirect(url_for('invoice_saved', invoice_id=new_invoice_id))
 
-    # GET – pusty formularz: wczytaj domyślną wartość checkboxa
     dane = {
         "use_netto": get_default_use_netto_for_invoice(get_current_lokal())
     }
@@ -78,11 +98,11 @@ def add_invoice():
     return render_template("add_invoice.html", dane=dane, current_lokal=get_current_lokal(),
                            get_use_netto=get_use_netto)
 
+
 @app.route('/edit_invoice/<int:invoice_id>', methods=['GET', 'POST'])
 def edit_invoice(invoice_id):
     db_session = Session()
 
-    # 🛡️ Zabezpiecz pobieranie tylko faktur z aktualnego lokalu
     invoice = db_session.query(Invoice).filter_by(
         id=invoice_id,
         lokal=get_current_lokal()
@@ -93,12 +113,20 @@ def edit_invoice(invoice_id):
         return "Brak dostępu lub faktura nie istnieje", 404
 
     if request.method == 'POST':
+        category = request.form.get('category')
+        goods_type = request.form.get('goods_type')
+
+        # 🟡 Walidacja: jeśli towar, to musi być goods_type
+        if (category or '').lower() == 'towar' and not goods_type:
+            flash("Dla kategorii 'towar' wybierz, czy to bar czy jedzenie.", "danger")
+            return redirect(request.url)
+
         invoice.invoice_date = datetime.datetime.strptime(request.form['invoice_date'], "%Y-%m-%d").date()
         invoice.gross_amount = float(request.form['gross_amount'])
         invoice.supplier = request.form['supplier_name']
         invoice.nip = request.form['supplier_nip']
-        invoice.category = request.form['category']
-        invoice.goods_type = request.form.get("goods_type")
+        invoice.category = category
+        invoice.goods_type = goods_type
         invoice.net_amount = float(request.form.get('net_amount', 0))
         invoice.note = request.form.get('note', '').strip()
         invoice.use_netto = 'use_netto' in request.form

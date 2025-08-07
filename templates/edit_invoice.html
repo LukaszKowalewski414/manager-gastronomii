@@ -23,7 +23,6 @@
             <input type="text" id="supplier_nip" name="supplier_nip" class="form-control" value="{{ invoice.nip }}">
         </div>
 
-
         <!-- Kwoty -->
         <div class="row mb-4">
             <div class="col-md-6">
@@ -37,14 +36,12 @@
         </div>
 
         <!-- Checkbox: użyj netto -->
-<div class="form-check mb-4">
-    <input class="form-check-input" type="checkbox" id="use_netto" name="use_netto"
-        {% if invoice.use_netto %}checked{% endif %}>
-    <label class="form-check-label" for="use_netto">
-        Użyj kwoty netto do analizy kosztów
-    </label>
-</div>
-
+        <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" id="use_netto" name="use_netto" {% if invoice.use_netto %}checked{% endif %}>
+            <label class="form-check-label" for="use_netto">
+                Użyj kwoty netto do analizy kosztów
+            </label>
+        </div>
 
         <!-- Numer faktury -->
         <div class="mb-4">
@@ -69,39 +66,22 @@
             </select>
         </div>
 
+        <!-- Rodzaj towaru (pokazywany tylko przy Towar) -->
+        <div class="mb-4" id="goods_type_wrapper" style="display: none;">
+            <label for="goods_type" class="form-label">Rodzaj towaru</label>
+            <select id="goods_type" name="goods_type" class="form-select">
+                <option value="">Wybierz rodzaj...</option>
+                <option value="jedzenie" {% if invoice.goods_type == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
+                <option value="bar" {% if invoice.goods_type == 'bar' %}selected{% endif %}>Bar</option>
+            </select>
+            <small class="form-text text-muted">Wymagane dla kategorii „Towar” – wpływa na obliczenia food costów.</small>
+        </div>
+
+        <!-- Notatka -->
         <div class="mb-3">
             <label for="note" class="form-label">Notatka (opcjonalnie)</label>
             <textarea name="note" class="form-control" rows="2">{{ invoice.note or '' }}</textarea>
         </div>
-
-
-        <div class="mb-4" id="goods_type_wrapper" style="display: none;">
-    <label for="goods_type" class="form-label">Rodzaj towaru</label>
-    <select id="goods_type" name="goods_type" class="form-select">
-        <option value="">Wybierz rodzaj...</option>
-        <option value="jedzenie" {% if invoice.goods_type == 'jedzenie' %}selected{% endif %}>Jedzenie</option>
-        <option value="bar" {% if invoice.goods_type == 'bar' %}selected{% endif %}>Bar</option>
-    </select>
-</div>
-
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const category = document.getElementById("category");
-        const goodsTypeWrapper = document.getElementById("goods_type_wrapper");
-
-        function toggleGoodsType() {
-            if (category.value === "Towar") {
-                goodsTypeWrapper.style.display = "block";
-            } else {
-                goodsTypeWrapper.style.display = "none";
-            }
-        }
-
-        category.addEventListener("change", toggleGoodsType);
-        toggleGoodsType();  // Run on page load
-    });
-</script>
-
 
         <!-- Przyciski -->
         <div class="text-center">
@@ -110,4 +90,22 @@
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const category = document.getElementById("category");
+    const goodsTypeWrapper = document.getElementById("goods_type_wrapper");
+
+    function toggleGoodsType() {
+        if (category.value === "Towar") {
+            goodsTypeWrapper.style.display = "block";
+        } else {
+            goodsTypeWrapper.style.display = "none";
+        }
+    }
+
+    category.addEventListener("change", toggleGoodsType);
+    toggleGoodsType(); // uruchom na starcie
+});
+</script>
 {% endblock %}
