@@ -1,5 +1,5 @@
 # SKRÓCONY POCZĄTEK – BEZ ZMIAN
-from flask import Flask, render_template, request, session, redirect, url_for
+from flask import Flask, render_template, request, session, redirect, url_for, jsonify
 from utils.pdf_reader import parse_invoice_from_pdf
 from database import Session
 from models import Revenue, Invoice, RozliczenieDzien
@@ -11,6 +11,9 @@ import os
 import json
 from utils.nip_utils import get_category_for_nip, save_category_for_nip
 from utils.pdf_reader_v2 import parse_invoice_from_pdf_v2
+from utils.config import get_use_netto, set_use_netto, get_default_use_netto_for_invoice, set_default_use_netto_for_invoice
+
+
 
 
 with open('utils/data/config.json') as f:
@@ -33,6 +36,11 @@ def home():
 def add_invoice():
     if request.method == 'POST':
         form_data = request.form.to_dict()
+        use_netto = 'use_netto' in form_data  # 🟢 odczytaj checkbox
+
+        # 🟢 zapisz preferencję do config.json
+        set_default_use_netto_for_invoice(get_current_lokal(), use_netto)
+
         invoice_date_str = form_data.get('purchase_date')
         invoice_date = datetime.datetime.strptime(invoice_date_str, "%Y-%m-%d").date() if invoice_date_str else None
 
@@ -49,7 +57,7 @@ def add_invoice():
             goods_type=form_data.get("goods_type"),
             lokal=get_current_lokal(),
             note=form_data.get('note', '').strip(),
-            use_netto='use_netto' in form_data
+            use_netto=use_netto  # 🟢 przypisz do faktury
         )
 
         db_session.add(invoice)
@@ -62,7 +70,13 @@ def add_invoice():
         db_session.close()
         return redirect(url_for('invoice_saved', invoice_id=new_invoice_id))
 
-    return render_template('add_invoice.html', dane={})
+    # GET – pusty formularz: wczytaj domyślną wartość checkboxa
+    dane = {
+        "use_netto": get_default_use_netto_for_invoice(get_current_lokal())
+    }
+
+    return render_template("add_invoice.html", dane=dane, current_lokal=get_current_lokal(),
+                           get_use_netto=get_use_netto)
 
 @app.route('/edit_invoice/<int:invoice_id>', methods=['GET', 'POST'])
 def edit_invoice(invoice_id):
@@ -142,23 +156,12 @@ def upload_invoice():
     dane["net_amount"] = dane.get("kwota netto", "")
     dane["filename"] = pdf_file.filename
 
-    return render_template('add_invoice.html', dane=dane)
-
-@app.route("/upload_invoice_v2", methods=["GET", "POST"])
-def upload_invoice_v2():
-    dane = {}
-    if request.method == "POST":
-        file = request.files["pdf_file"]
-        if file and file.filename.endswith(".pdf"):
-            filename = "tmp_invoice_v2.pdf"
-            filepath = os.path.join("uploads", filename)
-            file.save(filepath)
-            dane = parse_invoice_from_pdf_v2(filepath)
-            os.remove(filepath)
-        else:
-            return "Niepoprawny plik PDF"
-    return render_template("add_invoice.html", dane=dane)
-
+    return render_template(
+        'add_invoice.html',
+        dane=dane,
+        current_lokal=get_current_lokal(),
+        get_use_netto=get_use_netto
+    )
 
 @app.route('/invoice-saved/<int:invoice_id>')
 def invoice_saved(invoice_id):
@@ -937,6 +940,16 @@ def view_daily(id):
         prev_id=prev.id if prev else None,
         next_id=next.id if next else None
     )
+
+#WYBÓR CZY KORZYSTAMY Z KWOT NETTO CZY BRUTTO DO WSKAŹNIKÓW
+@app.route("/toggle_use_netto", methods=["POST"])
+def toggle_use_netto():
+    db_session = Session()
+    lokal = get_current_lokal()
+    current = get_use_netto(lokal)
+    set_use_netto(lokal, not current)
+    return jsonify({"new_value": not current})
+
 
 
 if __name__ == '__main__':

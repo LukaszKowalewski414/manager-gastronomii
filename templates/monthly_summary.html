@@ -38,102 +38,97 @@
     </form>
 
     <!-- Karty z liczbami -->
-    <!-- Górny rząd: pełna szerokość -->
-<div class="row text-center mb-4">
-    <div class="col-md-4">
-        <div class="card p-3 shadow">
-            <h5>💰 Suma utargów</h5>
-            <h3>{{ summary.total_revenue | round(2) }} zł</h3>
+    <div class="row text-center mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h5>💰 Suma utargów</h5>
+                <h3>{{ summary.total_revenue | round(2) }} zł</h3>
+            </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card p-3 shadow">
-            <h5>📉 Suma kosztów</h5>
-            <h3>{{ summary.total_costs | round(2) }} zł</h3>
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h5>📉 Suma kosztów</h5>
+                <h3>{{ summary.total_costs | round(2) }} zł</h3>
+            </div>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card p-3 shadow">
-            <h5>📊 Wynik</h5>
-            <h3 class="{{ 'text-success' if summary.net_result >= 0 else 'text-danger' }}">
-                {{ summary.net_result | round(2) }} zł
-            </h3>
-        </div>
-    </div>
-</div>
-
-<!-- Dolny rząd: mniejsze karty -->
-<div class="row text-center mb-5">
-    <!-- Wskaźnik kosztów pracowników bar -->
-    <div class="col-md-3">
-        <div class="card p-3 shadow small">
-            <h6>🧑‍🍳 Koszty prac. – bar</h6>
-            {% set bar_val = summary.cost_percentage_by_category['obsługa baru'] %}
-            <p class="fs-5 mb-0">
-                {{ bar_val | round(1) }}%
-                <span class="{% if bar_val < 30 %}text-success
-                            {% elif bar_val <= 40 %}text-warning
-                             {% else %}text-danger{% endif %}">
-                    {% if bar_val < 30 %}🟢
-                    {% elif bar_val <= 40 %}🟡
-                    {% else %}🔴
-                    {% endif %}
-                </span>
-
-            </p>
+        <div class="col-md-4">
+            <div class="card p-3 shadow">
+                <h5>📊 Wynik</h5>
+                <h3 class="{{ 'text-success' if summary.net_result >= 0 else 'text-danger' }}">
+                    {{ summary.net_result | round(2) }} zł
+                </h3>
+            </div>
         </div>
     </div>
 
-    <!-- Wskaźnik kosztów pracowników kuchnia -->
-    <div class="col-md-3">
-        <div class="card p-3 shadow small">
-            <h6>🧑‍🍳 Koszty prac. – kuchnia</h6>
-            {% set kitchen_val = summary.cost_percentage_by_category['obsługa kuchni'] %}
-            <p class="fs-5 mb-0">
-                {{ kitchen_val | round(1) }}%
-                <span class="{% if kitchen_val < 30 %}text-success
-              {% elif kitchen_val <= 40 %}text-warning
-              {% else %}text-danger{% endif %}">
-    {% if kitchen_val < 30 %}🟢
-    {% elif kitchen_val <= 40 %}🟡
-    {% else %}🔴
-    {% endif %}
-</span>
+    <!-- Dolny rząd: mniejsze karty -->
+    <div class="row text-center mb-5">
+        <!-- Koszty bar -->
+        <div class="col-md-3">
+            <div class="card p-3 shadow small">
+                <h6>🧑‍🍳 Koszty prac. – bar</h6>
+                {% set bar_val = summary.cost_percentage_by_category['obsługa baru'] %}
+                <p class="fs-5 mb-0">
+                    {{ bar_val | round(1) }}%
+                    <span class="{% if bar_val < 30 %}text-success
+                                {% elif bar_val <= 40 %}text-warning
+                                {% else %}text-danger{% endif %}">
+                        {% if bar_val < 30 %}🟢
+                        {% elif bar_val <= 40 %}🟡
+                        {% else %}🔴
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+        </div>
 
-            </p>
+        <!-- Koszty kuchnia -->
+        <div class="col-md-3">
+            <div class="card p-3 shadow small">
+                <h6>🧑‍🍳 Koszty prac. – kuchnia</h6>
+                {% set kitchen_val = summary.cost_percentage_by_category['obsługa kuchni'] %}
+                <p class="fs-5 mb-0">
+                    {{ kitchen_val | round(1) }}%
+                    <span class="{% if kitchen_val < 30 %}text-success
+                                  {% elif kitchen_val <= 40 %}text-warning
+                                  {% else %}text-danger{% endif %}">
+                        {% if kitchen_val < 30 %}🟢
+                        {% elif kitchen_val <= 40 %}🟡
+                        {% else %}🔴
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Foodcost bar -->
+        <div class="col-md-3">
+            <div class="card p-3 shadow small">
+                <h6>🍋 Foodcost – bar (towar)</h6>
+                <p class="fs-5 mb-0">{{ summary.foodcost_towar_bar['value'] }}%
+                    <span class="{% if summary.foodcost_towar_bar['value'] < 30 %}text-success
+                                  {% elif summary.foodcost_towar_bar['value'] <= 40 %}text-warning
+                                  {% else %}text-danger{% endif %}">
+                        {{ summary.foodcost_towar_bar['color'] }}
+                    </span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Foodcost kuchnia -->
+        <div class="col-md-3">
+            <div class="card p-3 shadow small">
+                <h6>🍽 Foodcost – kuchnia (towar)</h6>
+                <p class="fs-5 mb-0">{{ summary.foodcost_towar_kitchen['value'] }}%
+                    <span class="{% if summary.foodcost_towar_kitchen['value'] < 30 %}text-success
+                                  {% elif summary.foodcost_towar_kitchen['value'] <= 40 %}text-warning
+                                  {% else %}text-danger{% endif %}">
+                        {{ summary.foodcost_towar_kitchen['color'] }}
+                    </span>
+                </p>
+            </div>
         </div>
     </div>
-
-    <!-- Foodcost – bar (towar) -->
-    <div class="col-md-3">
-        <div class="card p-3 shadow small">
-            <h6>🍋 Foodcost – bar (towar)</h6>
-            <p class="fs-5 mb-0">{{ summary.foodcost_towar_bar['value'] }}%
-                <span class="{% if summary.foodcost_towar_bar['value'] < 30 %}text-success
-                              {% elif summary.foodcost_towar_bar['value'] <= 40 %}text-warning
-                              {% else %}text-danger{% endif %}">
-                    {{ summary.foodcost_towar_bar['color'] }}
-                </span>
-            </p>
-        </div>
-    </div>
-
-    <!-- Foodcost – kuchnia (towar) -->
-    <div class="col-md-3">
-        <div class="card p-3 shadow small">
-            <h6>🍽 Foodcost – kuchnia (towar)</h6>
-            <p class="fs-5 mb-0">{{ summary.foodcost_towar_kitchen['value'] }}%
-                <span class="{% if summary.foodcost_towar_kitchen['value'] < 30 %}text-success
-                              {% elif summary.foodcost_towar_kitchen['value'] <= 40 %}text-warning
-                              {% else %}text-danger{% endif %}">
-                    {{ summary.foodcost_towar_kitchen['color'] }}
-                </span>
-            </p>
-        </div>
-    </div>
-</div>
-
-
 
     <!-- Wykresy -->
     <div class="row mb-5">
@@ -146,25 +141,23 @@
     </div>
 
     <h4 class="mb-3">Przychody według kategorii</h4>
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>Kategoria</th>
-      <th>Kwota</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for category, value in summary.income_breakdown.items() %}
-      <tr>
-        <td>{{ category }}</td>
-        <td>{{ value|round(2) }} zł</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Kategoria</th>
+                <th>Kwota</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for category, value in summary.income_breakdown.items() %}
+            <tr>
+                <td>{{ category }}</td>
+                <td>{{ value|round(2) }} zł</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-
-    <!-- Tabela kosztów -->
     <h4 class="mb-3">Koszty według kategorii</h4>
     <table class="table table-bordered">
         <thead class="table-light">
@@ -219,11 +212,13 @@
     <h4 class="mb-0">Faktury za {{ MONTHS[selected_month] }} {{ selected_year }}</h4>
     <a href="{{ url_for('add_invoice') }}" class="btn btn-primary btn-sm py-1 px-2">+ dodaj fakturę</a>
 </div>
+
 <table class="table table-striped" id="invoice-table">
     <thead class="table-light">
         <tr>
             <th onclick="sortTable(0, 'date')">Data ⬍</th>
-            <th onclick="sortTable(1, 'number')">Kwota brutto ⬍</th>
+            <th onclick="sortTable(1, 'number')">Kwota ⬍</th>
+            <th>Rodzaj kwoty</th>
             <th onclick="sortTable(2, 'text')">Dostawca ⬍</th>
             <th>NIP</th>
             <th onclick="sortTable(4, 'text')">Kategoria ⬍</th>
@@ -234,7 +229,8 @@
         {% for invoice in invoices %}
         <tr>
             <td>{{ invoice.invoice_date }}</td>
-            <td>{{ invoice.gross_amount }} zł</td>
+            <td>{{ invoice.net_amount if invoice.use_netto else invoice.gross_amount }} zł</td>
+            <td>{{ "netto" if invoice.use_netto else "brutto" }}</td>
             <td>{{ invoice.supplier }}</td>
             <td>{{ invoice.nip }}</td>
             <td>{{ invoice.category }}</td>

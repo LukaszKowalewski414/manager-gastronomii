@@ -23,6 +23,8 @@
 <div class="container my-5">
     <h2 class="text-center mb-4 text-primary">Dodaj fakturę / koszt</h2>
 
+
+
     <!-- Formularz uploadu pliku -->
     <form method="POST" enctype="multipart/form-data" class="mb-5">
         <div class="mb-3">
@@ -33,12 +35,7 @@
         <div class="text-center d-flex justify-content-center gap-3">
             <button formaction="{{ url_for('upload_invoice') }}" type="submit" class="btn btn-info btn-lg px-4 position-relative">
                 Wczytaj fakturę
-                <span class="badge-overlay">V1</span>
-            </button>
-
-            <button formaction="{{ url_for('upload_invoice_v2') }}" type="submit" class="btn btn-success btn-lg px-4 position-relative">
-                Wczytaj fakturę 2
-                <span class="badge-overlay">V2</span>
+                <span class="badge-overlay">wersja beta</span>
             </button>
         </div>
     </form>
@@ -81,7 +78,7 @@
     <input class="form-check-input" type="checkbox" id="use_netto" name="use_netto"
         {% if dane.get('use_netto') %}checked{% endif %}>
     <label class="form-check-label" for="use_netto">
-        Użyj kwoty netto do analiz (zamiast brutto)
+        Użyj kwoty netto do analizy kosztów
     </label>
 </div>
 
@@ -164,4 +161,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
+<script>
+document.getElementById("toggleNettoBtn")?.addEventListener("click", function () {
+    fetch("/toggle_use_netto", { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            location.reload();  // po zmianie trybu – odśwież stronę, żeby przycisk i formularz się zaktualizowały
+        });
+});
+</script>
+
+
 {% endblock %}
